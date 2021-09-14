@@ -25,17 +25,20 @@
 #include <stdint.h>
 
 #include "beacon.h"
+#include "ble.h"
 
 #define TX_POWER    8
 #define NODE_ID     1
 
 uint8_t beacon_data[EDDYSTONE_UID_SIZE];
 
-void app_main(void) 
+void app_main(void)
 {
-    ble_adv_create_service_data(beacon_data, TX_POWER, NODE_ID);
-    ble_adv_set_scan_response(beacon_data, EDDYSTONE_UID_SIZE);
-    ble_adv_set_advertisement_data(NODE_ID);
+    ble_controller_init();
     
+    ble_adv_create_service_data(beacon_data, TX_POWER, NODE_ID);
+    ble_adv_set_advertisement_data(NODE_ID);
+    ble_adv_set_scan_response(beacon_data, EDDYSTONE_UID_SIZE);
+
     ble_adv_start();
 }
