@@ -1,5 +1,5 @@
 /* MicroStorm - BLE Tracking
- * src/beacon.c
+ * src/adv.c
  *
  * Copyright (c) 2021 Ricardo Steijn
  *
@@ -30,8 +30,10 @@
 #include <mbedtls/sha1.h>
 
 #include "main.h"
-#include "beacon.h"
-#include "ble.h"
+#include "adv.h"
+#include "controller.h"
+
+static const char *TAG = "adv";
 
 /**
  * \brief Create service data from an EddystoneUID struct.
@@ -52,7 +54,7 @@ void ble_adv_create_service_data(uint8_t *p_buffer, int8_t tx_power, int id)
     if (mbedtls_sha1_ret(sha1_input, strlen(COMPANY_NAME), sha1_output) == ESP_OK)
         memccpy(beacon.namespace_id, sha1_output, EDDYSTONE_UID_NSP_LEN, SHA1_LENGTH * sizeof(uint8_t));
     else
-        ESP_LOGE(BEACON_TAG, "SHA-1 hash generation failed");
+        ESP_LOGE(TAG, "SHA-1 hash generation failed");
 
     char id_buf[EDDYSTONE_UID_INST_LEN - strlen(INSTANCE_PREFIX)];
     sprintf(id_buf, "%d", id);
@@ -60,7 +62,7 @@ void ble_adv_create_service_data(uint8_t *p_buffer, int8_t tx_power, int id)
     if (asprintf(&instance_buf, "%s%s", INSTANCE_PREFIX, id_buf) != ESP_FAIL)
         strcpy(beacon.instance_id, instance_buf);
     else
-        ESP_LOGE(BEACON_TAG, "Could not allocate memory for instance data");
+        ESP_LOGE(TAG, "Could not allocate memory for instance data");
     
     beacon.reserved = 0x00;
 
@@ -100,7 +102,7 @@ void ble_adv_set_scan_response(uint8_t *p_service_data, uint8_t service_data_len
         (sizeof(raw_scan_rsp) + service_data_len)
     );
     if (scan_rsp_err != ESP_OK) {
-        ESP_LOGE(BEACON_TAG, "Configuring raw scan response data unsuccessful; %s", esp_err_to_name(scan_rsp_err));
+        ESP_LOGE(TAG, "Configuring raw scan response data unsuccessful; %s", esp_err_to_name(scan_rsp_err));
     }
 
     free(raw_scan_rsp_total);
@@ -118,7 +120,7 @@ void ble_adv_set_advertisement_data(int id)
     sprintf(id_buf, "%d", id);
     char *full_name;
     if (asprintf(&full_name, "%s%s%s", COMPANY_NAME, INSTANCE_PREFIX, id_buf) == ESP_FAIL) {
-        ESP_LOGE(BEACON_TAG, "Could not allocate memory for advertisement data");
+        ESP_LOGE(TAG, "Could not allocate memory for advertisement data");
         return;
     }
 
@@ -131,14 +133,14 @@ void ble_adv_set_advertisement_data(int id)
     uint8_t *raw_adv_total = malloc((sizeof(raw_adv) + strlen(full_name)) * sizeof(uint8_t));
 
     memcpy(raw_adv_total, raw_adv, sizeof(raw_adv) * sizeof(uint8_t));
-    memcpy(raw_adv_total + sizeof(raw_adv), (uint8_t*)full_name, strlen(full_name) * sizeof(char));
+    memcpy(raw_adv_total + sizeof(raw_adv), (uint8_t*)full_name, strlen(full_name) * sizeof(uint8_t));
 
     esp_err_t adv_err = esp_ble_gap_config_adv_data_raw(
         raw_adv_total,
         (sizeof(raw_adv) + strlen(full_name))
     );
     if (adv_err != ESP_OK) {
-        ESP_LOGE(BEACON_TAG, "Configuring raw advertisement data unsuccessful; %s", esp_err_to_name(adv_err));
+        ESP_LOGE(TAG, "Configuring raw advertisement data unsuccessful; %s", esp_err_to_name(adv_err));
     }
     
     free(full_name);
@@ -151,7 +153,7 @@ void ble_adv_set_advertisement_data(int id)
 void ble_adv_start()
 {
     if (!ble_controller_enabled()) {
-        ESP_LOGE(BEACON_TAG, "Could not start advertising, BLE controller not enabled.");
+        ESP_LOGE(TAG, "Could not start advertising, BLE controller not enabled.");
         return;
     }
 
@@ -167,34 +169,7 @@ void ble_adv_start()
 
     esp_err_t start_err = esp_ble_gap_start_advertising(&adv_params);
     if (start_err != ESP_OK) {
-        ESP_LOGE(BEACON_TAG, "Could not start advertising; %s", esp_err_to_name(start_err));
-    }
-}
-
-/**
- * \brief Set up a callback to handle GAP events.
- * 
- * \param event The event type.
- * \param param Gap parameters that can be checked.
- */
-void ble_adv_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
-{
-    switch (event) {
-        case ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT:
-            ESP_LOGI(BEACON_TAG, "Advertisement data is set");
-            break;
-        case ESP_GAP_BLE_SCAN_RSP_DATA_RAW_SET_COMPLETE_EVT:
-            ESP_LOGI(BEACON_TAG, "Scan response data is set");
-            break;
-        case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
-            if (param->adv_start_cmpl.status == ESP_BT_STATUS_SUCCESS)
-                ESP_LOGI(BEACON_TAG, "Advertising started");
-            else
-                ESP_LOGE(BEACON_TAG, "Advertising attempt unsuccessful; %d", param->adv_start_cmpl.status);
-            break;
-        default:
-            ESP_LOGW(BEACON_TAG, "Unhandled event; %d", event);
-            break;
+        ESP_LOGE(TAG, "Could not start advertising; %s", esp_err_to_name(start_err));
     }
 }
 
@@ -205,7 +180,7 @@ void ble_adv_stop()
 {
     esp_err_t stop_err = esp_ble_gap_stop_advertising();
     if (stop_err != ESP_OK) {
-        ESP_LOGE(BEACON_TAG, "Could not stop advertising; %s", esp_err_to_name(stop_err));
+        ESP_LOGE(TAG, "Could not stop advertising; %s", esp_err_to_name(stop_err));
     }
-    ESP_LOGI(BEACON_TAG, "Advertising stopped");
+    ESP_LOGI(TAG, "Advertising stopped");
 }

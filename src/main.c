@@ -24,8 +24,8 @@
 
 #include <stdint.h>
 
-#include "beacon.h"
-#include "ble.h"
+#include "adv.h"
+#include "controller.h"
 
 #define TX_POWER    8
 #define NODE_ID     1

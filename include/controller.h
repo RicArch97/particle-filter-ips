@@ -1,5 +1,5 @@
 /* MicroStorm - BLE Tracking
- * include/beacon.h
+ * include/controller.h
  *
  * Copyright (c) 2021 Ricardo Steijn
  *
@@ -22,39 +22,12 @@
  * SOFTWARE.
  */
 
-#ifndef BEACON_H
-#define BEACON_H
+#ifndef CONTROLLER_H
+#define CONTROLLER_H
 
-#include <stdint.h>
-#include <esp_gap_ble_api.h>
+#include <stdbool.h>
 
-#define SHA1_LENGTH                     20
-
-#define BLE_ADV_APPEARANCE              0x0547
-#define BLE_MIN_ADV_INTERVAL            0X20
-#define BLE_MAX_ADV_INTERVAL            0x40
-
-#define EDDYSTONE_UUID                  0xFEAA
-#define EDDYSTONE_UID_FRAME_TYPE        0x00
-#define EDDYSTONE_UID_NSP_LEN           10
-#define EDDYSTONE_UID_INST_LEN          6
-#define EDDYSTONE_UID_SIZE              20
-
-#define BEACON_TAG                      "beacon"
-
-typedef struct {
-    uint8_t frame_type;
-    int8_t tx_power;
-    uint8_t namespace_id[EDDYSTONE_UID_NSP_LEN];
-    char instance_id[EDDYSTONE_UID_INST_LEN];
-    uint16_t reserved;
-} __attribute__((packed)) eddystone_uid_t;
-
-void ble_adv_create_service_data(uint8_t *p_buffer, int8_t tx_power, int id);
-void ble_adv_set_scan_response(uint8_t *p_service_data, uint8_t service_data_len);
-void ble_adv_set_advertisement_data(int id);
-void ble_adv_start();
-void ble_adv_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
-void ble_adv_stop();
+void ble_controller_init();
+bool ble_controller_enabled();
 
 #endif
