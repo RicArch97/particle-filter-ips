@@ -1,6 +1,6 @@
 /* 
  * MicroStorm - BLE Tracking
- * src/main.c
+ * src/util.c
  *
  * Copyright (c) 2021 Ricardo Steijn
  *
@@ -23,23 +23,22 @@
  * SOFTWARE.
  */
 
-#include <stdint.h>
+#include <math.h>
 
-#include "adv.h"
-#include "controller.h"
-#include "scan.h"
 #include "util.h"
 
-#define NODE_ID     1
-
-void app_main(void)
+/**
+ * \brief Calculate the RSSI from dBm to meters.
+ * 
+ * \param rssi Measured rssi value.
+ * \param tx_power Received power at 1 meters in dBm.
+ * 
+ * \return Measured distance in meters.
+ */
+double ble_util_rssi_to_meters(int rssi, int8_t tx_power)
 {
-    ble_controller_init();
-    
-    ble_adv_set_advertisement_data(
-        ble_adv_create_service_data((TX_POWER_ONE_METER + SIGNAL_LOSS), NODE_ID));
-    ble_adv_set_scan_response_data(NODE_ID);
-
-    ble_adv_start();
-    ble_scan_start(0);
+    // RSSI = -10*n*log10(d/d0) + A0
+    // with d0 measured at 1 meter:
+    // d = 10^((A-RSSI)/(10*n))
+    return pow(10, ((double)(tx_power - rssi) / (10 * BLE_ENV_FACTOR_IND)));
 }

@@ -1,4 +1,5 @@
-/* MicroStorm - BLE Tracking
+/* 
+ * MicroStorm - BLE Tracking
  * src/controller.c
  *
  * Copyright (c) 2021 Ricardo Steijn
@@ -22,6 +23,8 @@
  * SOFTWARE.
  */
 
+#include <string.h>
+
 #include <esp_bt.h>
 #include <esp_bt_main.h>
 #include <esp_log.h>
@@ -29,6 +32,8 @@
 #include <nvs_flash.h>
 
 #include "controller.h"
+#include "scan.h"
+#include "util.h"
 
 static const char *TAG = "controller";
 
@@ -40,22 +45,75 @@ static const char *TAG = "controller";
  */
 static void ble_controller_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
+    esp_err_t err;
+    ble_scan_rst_pkt_t result_pkt;
+    int found_adv, found_scan_rsp;
+
     switch (event) {
-        case ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT:
-            ESP_LOGI(TAG, "Advertisement data is set");
-            break;
-        case ESP_GAP_BLE_SCAN_RSP_DATA_RAW_SET_COMPLETE_EVT:
-            ESP_LOGI(TAG, "Scan response data is set");
-            break;
-        case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
-            if (param->adv_start_cmpl.status == ESP_BT_STATUS_SUCCESS)
-                ESP_LOGI(TAG, "Advertising started");
-            else
-                ESP_LOGE(TAG, "Advertising attempt unsuccessful; %d", param->adv_start_cmpl.status);
+    case ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT:
+        ESP_LOGI(TAG, "Advertisement data is set");
+        break;
+    case ESP_GAP_BLE_SCAN_RSP_DATA_RAW_SET_COMPLETE_EVT:
+        ESP_LOGI(TAG, "Scan response data is set");
+        break;
+    case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
+        if ((err = param->adv_start_cmpl.status) == ESP_BT_STATUS_SUCCESS)
+            ESP_LOGI(TAG, "Advertising started");
+        else
+            ESP_LOGE(TAG, "Advertising start attempt unsuccessful; %s", esp_err_to_name(err));
+        break;
+    case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT:
+        ESP_LOGI(TAG, "Scan params are set.");
+        break;
+    case ESP_GAP_BLE_SCAN_START_COMPLETE_EVT:
+        if ((err = param->scan_start_cmpl.status) == ESP_BT_STATUS_SUCCESS)
+            ESP_LOGI(TAG, "Scanning started");
+        else
+            ESP_LOGE(TAG, "Scanning start attempt unsuccessful; %s", esp_err_to_name(err));
+        break;
+    case ESP_GAP_BLE_SCAN_RESULT_EVT:
+        switch (param->scan_rst.search_evt) {
+        case ESP_GAP_SEARCH_INQ_RES_EVT:
+            memset(&result_pkt, 0, sizeof(result_pkt));
+            found_adv = ble_scan_decode_adv(
+                param->scan_rst.ble_adv, param->scan_rst.adv_data_len, &result_pkt);
+            // include scan response data when found    
+            found_scan_rsp = ble_scan_decode_scan_rsp(
+                param->scan_rst.ble_adv + param->scan_rst.adv_data_len, 
+                param->scan_rst.scan_rsp_len, &result_pkt);
+            // if we didn't find matching advertsing data skip event   
+            if (found_adv != 0) {
+                return;
+            } 
+            else {
+                result_pkt.rssi = param->scan_rst.rssi;
+                ESP_LOGI(TAG, "Found BLE Node");
+                ESP_LOGI(TAG, "RSSI in m: %f", ble_util_rssi_to_meters(
+                    result_pkt.rssi, TX_POWER_ONE_METER));
+                if (found_scan_rsp == 0) {
+                    ESP_LOGI(TAG, "Name: %s", result_pkt.scan_rsp.local_name);
+                }
+            }
             break;
         default:
-            ESP_LOGW(TAG, "Unhandled event; %d", event);
             break;
+        }
+        break;
+    case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
+        if ((err = param->adv_stop_cmpl.status) == ESP_BT_STATUS_SUCCESS)
+            ESP_LOGI(TAG, "Advertising stopped");
+        else
+            ESP_LOGE(TAG, "Advertising stop attempt unsuccessful; %s", esp_err_to_name(err));
+        break;
+    case ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT:
+        if ((err = param->scan_stop_cmpl.status) == ESP_BT_STATUS_SUCCESS)
+            ESP_LOGI(TAG, "Scanning stopped");
+        else
+            ESP_LOGE(TAG, "Scanning stop attempt unsuccessful; %s", esp_err_to_name(err));
+        break;
+    default:
+        ESP_LOGW(TAG, "Unhandled event; %d", event);
+        break;
     }
 }
 
@@ -66,44 +124,25 @@ static void ble_controller_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_p
  */
 void ble_controller_init()
 {
-    esp_err_t nvs_init_err = nvs_flash_init();
-    if (nvs_init_err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize NVS flash; %s", esp_err_to_name(nvs_init_err));
-    }
+    ESP_ERROR_CHECK(nvs_flash_init());
 
     // free unused memory from heap
-    esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT);
+    ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
 
     esp_bt_controller_config_t cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
 
     if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_IDLE) {
-        esp_err_t bt_init_err = esp_bt_controller_init(&cfg);
-        if (bt_init_err != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to initialize BLE controller; %s", esp_err_to_name(bt_init_err));
-            return;
-        }
+        ESP_ERROR_CHECK(esp_bt_controller_init(&cfg));
     }
     if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_INITED) {
-        esp_err_t bt_enable_err = esp_bt_controller_enable(ESP_BT_MODE_BLE);
-        if (bt_enable_err != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to enable BLE controller; %s", esp_err_to_name(bt_enable_err));
-            return;
-        }
+        ESP_ERROR_CHECK(esp_bt_controller_enable(ESP_BT_MODE_BLE));
     }
 
     if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_UNINITIALIZED) {
-        esp_err_t bdrd_init_err = esp_bluedroid_init();
-        if (bdrd_init_err != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to initialize bluedroid; %s", esp_err_to_name(bdrd_init_err));
-            return;
-        }
+        ESP_ERROR_CHECK(esp_bluedroid_init());
     }
     if (esp_bluedroid_get_status() != ESP_BLUEDROID_STATUS_ENABLED) {
-        esp_err_t bdrd_enable_err = esp_bluedroid_enable();
-        if (bdrd_enable_err != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to enable bluedroid; %s", esp_err_to_name(bdrd_enable_err));
-            return;
-        }
+        ESP_ERROR_CHECK(esp_bluedroid_enable());
     }
 
     esp_err_t gap_cb_err = esp_ble_gap_register_callback(ble_controller_gap_cb);
@@ -116,7 +155,7 @@ void ble_controller_init()
  * 
  * \return true when the controller is enabled, false when it is not.
  */
-bool ble_controller_enabled()
+int ble_controller_enabled()
 {
-    return (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_ENABLED);
+    return (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_ENABLED) ? 1 : 0;
 }

@@ -1,5 +1,6 @@
-/* MicroStorm - BLE Tracking
- * include/main.h
+/* 
+ * MicroStorm - BLE Tracking
+ * include/scan.h
  *
  * Copyright (c) 2021 Ricardo Steijn
  *
@@ -22,10 +23,38 @@
  * SOFTWARE.
  */
 
-#ifndef MAIN_H
-#define MAIN_H
+#ifndef SCAN_H
+#define SCAN_H
 
-#define COMPANY_NAME    "MicroStorm"
-#define INSTANCE_PREFIX "Node"
+#include <stdint.h>
+
+#define BLE_SCAN_INTERVAL       0x50
+#define BLE_SCAN_WINDOW         0x30
+
+#define LOCAL_NAME_LEN          16
+
+typedef struct {
+    struct {
+        uint8_t flags;
+        uint16_t uuid;
+        struct {
+            int8_t tx_power;
+            uint8_t namespace_id[10];
+            char instance_id[7];
+        } uid_beacon;
+    } adv;
+    struct {
+        uint16_t appearance;
+        char local_name[17];
+    } scan_rsp;
+    int rssi;
+} ble_scan_rst_pkt_t;
+
+int ble_scan_decode_adv(
+    const uint8_t *p_adv_data, uint8_t data_len, ble_scan_rst_pkt_t *rst);
+int ble_scan_decode_scan_rsp(
+    const uint8_t *p_scan_rsp_data, uint8_t data_len, ble_scan_rst_pkt_t *rst);
+void ble_scan_start(uint32_t duration);
+void ble_scan_stop();
 
 #endif

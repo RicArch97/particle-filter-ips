@@ -1,6 +1,6 @@
 /* 
  * MicroStorm - BLE Tracking
- * src/main.c
+ * include/util.h
  *
  * Copyright (c) 2021 Ricardo Steijn
  *
@@ -23,23 +23,16 @@
  * SOFTWARE.
  */
 
+#ifndef UTIL_H
+#define UTIL_H
+
 #include <stdint.h>
 
-#include "adv.h"
-#include "controller.h"
-#include "scan.h"
-#include "util.h"
+#define TX_POWER_ONE_METER  -50
+#define SIGNAL_LOSS         41
 
-#define NODE_ID     1
+#define BLE_ENV_FACTOR_IND  2
 
-void app_main(void)
-{
-    ble_controller_init();
-    
-    ble_adv_set_advertisement_data(
-        ble_adv_create_service_data((TX_POWER_ONE_METER + SIGNAL_LOSS), NODE_ID));
-    ble_adv_set_scan_response_data(NODE_ID);
+double ble_util_rssi_to_meters(int rssi, int8_t tx_power);
 
-    ble_adv_start();
-    ble_scan_start(0);
-}
+#endif

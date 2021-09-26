@@ -1,4 +1,5 @@
-/* MicroStorm - BLE Tracking
+/* 
+ * MicroStorm - BLE Tracking
  * include/controller.h
  *
  * Copyright (c) 2021 Ricardo Steijn
@@ -25,9 +26,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#include <stdbool.h>
-
 void ble_controller_init();
-bool ble_controller_enabled();
+int ble_controller_enabled();
 
 #endif

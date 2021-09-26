@@ -1,4 +1,5 @@
-/* MicroStorm - BLE Tracking
+/* 
+ * MicroStorm - BLE Tracking
  * include/adv.h
  *
  * Copyright (c) 2021 Ricardo Steijn
@@ -30,7 +31,7 @@
 #define SHA1_LENGTH                     20
 
 #define BLE_ADV_APPEARANCE              0x0547
-#define BLE_MIN_ADV_INTERVAL            0X20
+#define BLE_MIN_ADV_INTERVAL            0x20
 #define BLE_MAX_ADV_INTERVAL            0x40
 
 #define EDDYSTONE_UUID                  0xFEAA
@@ -42,14 +43,46 @@
 typedef struct {
     uint8_t frame_type;
     int8_t tx_power;
-    uint8_t namespace_id[EDDYSTONE_UID_NSP_LEN];
-    char instance_id[EDDYSTONE_UID_INST_LEN];
+    uint8_t namespace_id[10];
+    uint8_t instance_id[6];
     uint16_t reserved;
 } __attribute__((packed)) eddystone_uid_t;
 
-void ble_adv_create_service_data(uint8_t *p_buffer, int8_t tx_power, int id);
-void ble_adv_set_scan_response(uint8_t *p_service_data, uint8_t service_data_len);
-void ble_adv_set_advertisement_data(int id);
+typedef struct {
+    struct {
+        uint8_t len;
+        uint8_t type;
+        uint8_t flags;
+    } flags;
+    struct {
+        uint8_t len;
+        uint8_t type;
+        uint16_t uuid;
+    } uuid;
+    struct {
+        uint8_t len;
+        uint8_t type;
+        uint16_t uuid;
+        eddystone_uid_t uid_beacon;
+    } uid_frame;
+} __attribute__((packed)) eddystone_adv_packet_t;
+
+typedef struct {
+    struct {
+        uint8_t len;
+        uint8_t type;
+        uint16_t appearance;
+    } appearance;
+    struct {
+        uint8_t len;
+        uint8_t type;
+        uint8_t name[16];
+    } local_name;
+} __attribute__((packed)) eddystone_scan_rsp_packet_t;
+
+eddystone_uid_t ble_adv_create_service_data(int8_t tx_power, int node_id);
+void ble_adv_set_advertisement_data(eddystone_uid_t service_data);
+void ble_adv_set_scan_response_data(int id);
 void ble_adv_start();
 void ble_adv_stop();
 
