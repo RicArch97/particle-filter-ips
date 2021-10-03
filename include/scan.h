@@ -28,8 +28,8 @@
 
 #include <stdint.h>
 
-#define BLE_SCAN_INTERVAL       0x50
-#define BLE_SCAN_WINDOW         0x30
+#define BLE_SCAN_INTERVAL       0x0010
+#define BLE_SCAN_WINDOW         0x0010
 
 #define LOCAL_NAME_LEN          16
 

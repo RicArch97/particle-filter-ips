@@ -31,8 +31,8 @@
 #define SHA1_LENGTH                     20
 
 #define BLE_ADV_APPEARANCE              0x0547
-#define BLE_MIN_ADV_INTERVAL            0x20
-#define BLE_MAX_ADV_INTERVAL            0x40
+#define BLE_MIN_ADV_INTERVAL            0x0020
+#define BLE_MAX_ADV_INTERVAL            0x0040
 
 #define EDDYSTONE_UUID                  0xFEAA
 #define EDDYSTONE_UID_FRAME_TYPE        0x00
