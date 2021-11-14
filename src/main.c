@@ -28,7 +28,7 @@
 #include "adv.h"
 #include "controller.h"
 #include "scan.h"
-#include "util.h"
+#include "rssi.h"
 
 #define NODE_ID     1
 
@@ -37,9 +37,9 @@ void app_main(void)
     ble_controller_init();
     
     ble_adv_set_advertisement_data(
-        ble_adv_create_service_data((TX_POWER_ONE_METER + SIGNAL_LOSS), NODE_ID));
+       ble_adv_create_service_data((TX_POWER_ONE_METER + SIGNAL_LOSS), NODE_ID));
     ble_adv_set_scan_response_data(NODE_ID);
 
     ble_adv_start();
-    ble_scan_start(0);
+    ble_scan_start(3);
 }

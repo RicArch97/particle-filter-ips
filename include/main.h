@@ -1,6 +1,6 @@
 /* 
  * MicroStorm - BLE Tracking
- * include/util.h
+ * include/main.h
  *
  * Copyright (c) 2021 Ricardo Steijn
  *
@@ -23,12 +23,15 @@
  * SOFTWARE.
  */
 
-#ifndef UTIL_H
-#define UTIL_H
+#ifndef MAIN_H
+#define MAIN_H
 
-float ble_util_rand_float(float min, float max);
-float *ble_util_corput(int set_size, int base);
-int *ble_util_prime_sieve(int set_size);
-float ble_util_scale(float x, float a, float b, float c, float d);
+// identifiers of the beacon
+#define COMPANY_NAME    "MicroStorm"
+#define INSTANCE_PREFIX "Node"
+
+// area size (rectangle)
+#define AREA_X          3
+#define AREA_Y          2
 
 #endif

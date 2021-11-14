@@ -28,23 +28,45 @@
 
 #include <esp_log.h>
 #include <esp_gap_ble_api.h>
+#include <mbedtls/sha1.h>
 
+#include "main.h"
 #include "scan.h"
 #include "controller.h"
 #include "adv.h"
 
 static const char *TAG = "scan";
-static const char *NAMESPACE = "A3B9681B2B472CDC77D0C14F57421E91DC93916C";
-static const char *INSTANCE_PREFIX = "Node";
 
 static esp_ble_scan_params_t ble_scan_params = {
-    .scan_type              = BLE_SCAN_TYPE_ACTIVE,
+    .scan_type              = BLE_SCAN_TYPE_PASSIVE,
     .own_addr_type          = BLE_ADDR_TYPE_PUBLIC,
     .scan_filter_policy     = BLE_SCAN_FILTER_ALLOW_ALL,
     .scan_interval          = BLE_SCAN_INTERVAL,
     .scan_window            = BLE_SCAN_WINDOW,
     .scan_duplicate         = BLE_SCAN_DUPLICATE_DISABLE
 };
+
+/**
+ * \brief Return a byte array of the hashed namespace id.
+ * 
+ * \param namespace Namespace id.
+ * 
+ * \return Pointer to the dynamically allocated byte array.
+ * Returns NULL on error.
+ */
+uint8_t *get_namespace_hash(const char *namespace)
+{
+    uint8_t *hash = malloc(SHA1_LENGTH);
+    if (hash == NULL)
+        return NULL;
+
+    uint8_t *input = (uint8_t*)namespace;
+    if (mbedtls_sha1_ret(input, strlen(namespace), hash) != ESP_OK) {
+        free(hash);
+        return NULL;
+    }
+    return hash;
+}
 
 /**
  * \brief Read 16 bit little endian value and swap to big endian.
@@ -54,31 +76,9 @@ static esp_ble_scan_params_t ble_scan_params = {
  * 
  * \return 16 bit value with swapped endianess.
  */
-static uint16_t little_endian_read_u16(const uint8_t *data, uint8_t p_ctr)
+uint16_t little_endian_read_u16(const uint8_t *data, uint8_t p_ctr)
 {
     return ((uint16_t)data[p_ctr]) | (((uint16_t)data[(p_ctr)+1]) << 8);
-}
-
-
-/**
- * \brief Converts a byte array to a hex string. Dynamically allocates memory.
- * 
- * \param arr Byte array.
- * \param len The length of the byte array.
- * 
- * \return Pointer to the dynamically allocated hex string.
- */
-static char *byte_array_to_hex_str(const uint8_t *arr, uint8_t len)
-{   
-    // each number is 2 digits in a hex string
-    char *hex_str = malloc((len * 2) + 1);
-    char *pos = &hex_str[0];
-
-    for (int i = 0; i < len; i++) {
-        pos += sprintf(pos, "%02X", arr[i]);
-    }
-
-    return hex_str;
 }
 
 /**
@@ -98,7 +98,6 @@ int ble_scan_decode_adv(
 
     uint8_t p_ctr = 0;
     uint16_t uuid, serv_data_type, frame_type;
-    char *nsp_hex_str;
 
     while (p_ctr < data_len) {
         p_ctr++;  // frame len
@@ -132,14 +131,16 @@ int ble_scan_decode_adv(
             for (int i = 0; i < EDDYSTONE_UID_NSP_LEN; i++) {
                 rst->adv.uid_beacon.namespace_id[i] = p_adv_data[p_ctr++];
             }
-            nsp_hex_str = byte_array_to_hex_str(
-                rst->adv.uid_beacon.namespace_id, EDDYSTONE_UID_NSP_LEN);
+            uint8_t *nsp_hash = get_namespace_hash(COMPANY_NAME);
+            if (nsp_hash == NULL)
+                return -1;
             // compare namespace to the first 10 characters to our hash   
-            if (strncmp(nsp_hex_str, NAMESPACE, EDDYSTONE_UID_NSP_LEN) != 0) {
-                free(nsp_hex_str);
+            if (memcmp(rst->adv.uid_beacon.namespace_id, nsp_hash, 
+                    EDDYSTONE_UID_NSP_LEN) != 0) {
+                free(nsp_hash);
                 return -1;
             }
-            free(nsp_hex_str);
+            free(nsp_hash);
             // check if instance id contains our prefix
             for (int i = 0; i < EDDYSTONE_UID_INST_LEN; i++) {
                 rst->adv.uid_beacon.instance_id[i] = (char)p_adv_data[p_ctr++];
@@ -236,7 +237,7 @@ void ble_scan_start(uint32_t duration)
 /**
  * \brief Stop advertising.
  */
-void ble_scan_stop()
+void ble_scan_stop(void)
 {
     esp_err_t stop_err = esp_ble_gap_stop_scanning();
     if (stop_err != ESP_OK) {

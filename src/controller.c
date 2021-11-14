@@ -33,7 +33,7 @@
 
 #include "controller.h"
 #include "scan.h"
-#include "util.h"
+#include "rssi.h"
 
 static const char *TAG = "controller";
 
@@ -43,11 +43,12 @@ static const char *TAG = "controller";
  * \param event The event type.
  * \param param GAP parameters that can be checked.
  */
-static void ble_controller_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
+void ble_controller_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
     esp_err_t err;
-    ble_scan_rst_pkt_t result_pkt;
-    int found_adv, found_scan_rsp;
+    int found_adv;
+
+    ble_scan_rst_pkt_t result_pkt = {0};
 
     switch (event) {
     case ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT:
@@ -74,25 +75,14 @@ static void ble_controller_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_p
     case ESP_GAP_BLE_SCAN_RESULT_EVT:
         switch (param->scan_rst.search_evt) {
         case ESP_GAP_SEARCH_INQ_RES_EVT:
-            memset(&result_pkt, 0, sizeof(result_pkt));
             found_adv = ble_scan_decode_adv(
                 param->scan_rst.ble_adv, param->scan_rst.adv_data_len, &result_pkt);
-            // include scan response data when found    
-            found_scan_rsp = ble_scan_decode_scan_rsp(
-                param->scan_rst.ble_adv + param->scan_rst.adv_data_len, 
-                param->scan_rst.scan_rsp_len, &result_pkt);
             // if we didn't find matching advertsing data skip event   
             if (found_adv != 0) {
                 return;
             } 
             else {
-                result_pkt.rssi = param->scan_rst.rssi;
-                ESP_LOGI(TAG, "Found BLE Node");
-                ESP_LOGI(TAG, "RSSI in m: %f", ble_util_rssi_to_meters(
-                    result_pkt.rssi, TX_POWER_ONE_METER));
-                if (found_scan_rsp == 0) {
-                    ESP_LOGI(TAG, "Name: %s", result_pkt.scan_rsp.local_name);
-                }
+                ble_rssi_update(param->scan_rst.rssi);
             }
             break;
         default:
@@ -122,7 +112,7 @@ static void ble_controller_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_p
  * 
  * \param device_name identifier for this device.
  */
-void ble_controller_init()
+void ble_controller_init(void)
 {
     ESP_ERROR_CHECK(nvs_flash_init());
 
@@ -155,7 +145,7 @@ void ble_controller_init()
  * 
  * \return true when the controller is enabled, false when it is not.
  */
-int ble_controller_enabled()
+int ble_controller_enabled(void)
 {
     return (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_ENABLED) ? 1 : 0;
 }

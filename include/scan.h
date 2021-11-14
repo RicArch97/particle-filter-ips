@@ -47,7 +47,6 @@ typedef struct {
         uint16_t appearance;
         char local_name[17];
     } scan_rsp;
-    int rssi;
 } ble_scan_rst_pkt_t;
 
 int ble_scan_decode_adv(
@@ -55,6 +54,6 @@ int ble_scan_decode_adv(
 int ble_scan_decode_scan_rsp(
     const uint8_t *p_scan_rsp_data, uint8_t data_len, ble_scan_rst_pkt_t *rst);
 void ble_scan_start(uint32_t duration);
-void ble_scan_stop();
+void ble_scan_stop(void);
 
 #endif

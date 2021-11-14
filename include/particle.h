@@ -1,6 +1,6 @@
 /* 
  * MicroStorm - BLE Tracking
- * include/util.h
+ * include/particle.h
  *
  * Copyright (c) 2021 Ricardo Steijn
  *
@@ -23,12 +23,38 @@
  * SOFTWARE.
  */
 
-#ifndef UTIL_H
-#define UTIL_H
+#ifndef PARTICLE_H
+#define PARTICLE_H
 
-float ble_util_rand_float(float min, float max);
-float *ble_util_corput(int set_size, int base);
-int *ble_util_prime_sieve(int set_size);
-float ble_util_scale(float x, float a, float b, float c, float d);
+#include "main.h"
+#include "mesh.h"
+
+#define PARTICLE_SET_SIZE       100
+#define NO_OF_APS               4
+
+#define AP_MEASUREMENT_NOISE    0.5
+#define RATIO_COEFFICIENT       1.2
+
+#define GAUSS_NOISE_X           1
+#define GAUSS_NOISE_Y           1
+
+typedef struct {
+    float d_node;
+    float d_particle;
+} ble_particle_ap_dist_t;
+
+typedef struct {
+    struct {
+        struct {
+            float x;
+            float y;
+        } coord;
+        float speed;
+        float angle;
+    } state;
+    float weight;
+} ble_particle_t;
+
+int ble_particle_update(ble_mesh_ap_states_t *states, int size);
 
 #endif

@@ -26,7 +26,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-void ble_controller_init();
-int ble_controller_enabled();
+void ble_controller_init(void);
+int ble_controller_enabled(void);
 
 #endif

@@ -1,6 +1,6 @@
 /* 
  * MicroStorm - BLE Tracking
- * include/util.h
+ * src/mesh.c
  *
  * Copyright (c) 2021 Ricardo Steijn
  *
@@ -23,12 +23,4 @@
  * SOFTWARE.
  */
 
-#ifndef UTIL_H
-#define UTIL_H
-
-float ble_util_rand_float(float min, float max);
-float *ble_util_corput(int set_size, int base);
-int *ble_util_prime_sieve(int set_size);
-float ble_util_scale(float x, float a, float b, float c, float d);
-
-#endif
+#include "mesh.h"

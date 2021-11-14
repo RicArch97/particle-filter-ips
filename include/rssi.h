@@ -1,6 +1,6 @@
 /* 
  * MicroStorm - BLE Tracking
- * include/util.h
+ * include/rssi.h
  *
  * Copyright (c) 2021 Ricardo Steijn
  *
@@ -23,12 +23,26 @@
  * SOFTWARE.
  */
 
-#ifndef UTIL_H
-#define UTIL_H
+#ifndef RSSI_H
+#define RSSI_H
 
-float ble_util_rand_float(float min, float max);
-float *ble_util_corput(int set_size, int base);
-int *ble_util_prime_sieve(int set_size);
-float ble_util_scale(float x, float a, float b, float c, float d);
+#include <stdint.h>
+
+#define TX_POWER_ONE_METER  -56
+#define SIGNAL_LOSS         41
+
+#define BLE_ENV_FACTOR_IND  2
+
+#define M_WEIGHT            0.3
+#define P_WEIGHT            0.3
+
+typedef struct {
+    float state;
+    float p_noise;
+    float m_noise;
+    float err_v;
+} ble_rssi_state_t;
+
+void ble_rssi_update(int measurement);
 
 #endif

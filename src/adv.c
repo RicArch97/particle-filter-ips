@@ -30,12 +30,11 @@
 #include <esp_gap_ble_api.h>
 #include <mbedtls/sha1.h>
 
+#include "main.h"
 #include "adv.h"
 #include "controller.h"
 
 static const char *TAG = "adv";
-static const char *COMPANY_NAME = "MicroStorm";
-static const char *INSTANCE_PREFIX = "Node";
 
 static esp_ble_adv_params_t ble_adv_params = {
     .adv_int_min        = BLE_MIN_ADV_INTERVAL,
@@ -69,7 +68,7 @@ eddystone_uid_t ble_adv_create_service_data(int8_t tx_power, int id)
     else
         ESP_LOGE(TAG, "SHA-1 hash generation failed");
 
-    char id_buf[EDDYSTONE_UID_INST_LEN - strlen(INSTANCE_PREFIX)];
+    char id_buf[2];
     sprintf(id_buf, "%d", id);
     char *instance_buf;
     if (asprintf(&instance_buf, "%s%s", INSTANCE_PREFIX, id_buf) != ESP_FAIL)
@@ -111,6 +110,10 @@ void ble_adv_set_advertisement_data(eddystone_uid_t service_data)
     };
 
     uint8_t *p_raw_adv = malloc(sizeof(ble_adv_packet));
+    if (p_raw_adv == NULL) {
+        ESP_LOGE(TAG, "Could not allocate memory for adv packet");
+        return;
+    }
     memcpy(p_raw_adv, (const uint8_t*)&ble_adv_packet, sizeof(ble_adv_packet));
 
     esp_err_t adv_err = esp_ble_gap_config_adv_data_raw(
@@ -132,7 +135,7 @@ void ble_adv_set_advertisement_data(eddystone_uid_t service_data)
  */
 void ble_adv_set_scan_response_data(int id)
 {
-    char id_buf[EDDYSTONE_UID_INST_LEN - strlen(INSTANCE_PREFIX)];
+    char id_buf[2];
     sprintf(id_buf, "%d", id);
     char *full_name;
     if (asprintf(&full_name, "%s%s%s", COMPANY_NAME, 
@@ -156,6 +159,11 @@ void ble_adv_set_scan_response_data(int id)
         strlen(full_name));
 
     uint8_t *p_raw_scan_rsp = malloc(sizeof(ble_scan_rsp_packet));
+    if (p_raw_scan_rsp == NULL) {
+        ESP_LOGE(TAG, "Could not allocate memory for scan resp packet");
+        free(full_name);
+        return;
+    }
     memcpy(p_raw_scan_rsp, (const uint8_t*)&ble_scan_rsp_packet, 
         sizeof(ble_scan_rsp_packet));
 
@@ -174,7 +182,7 @@ void ble_adv_set_scan_response_data(int id)
 /**
  * \brief Set advertising params & start advertising as Eddystone UID beacon.
  */
-void ble_adv_start()
+void ble_adv_start(void)
 {
     if (!ble_controller_enabled()) {
         ESP_LOGE(TAG, "Could not start advertising, BLE controller not enabled.");
@@ -190,7 +198,7 @@ void ble_adv_start()
 /**
  * \brief Stop advertising.
  */
-void ble_adv_stop()
+void ble_adv_stop(void)
 {
     esp_err_t stop_err = esp_ble_gap_stop_advertising();
     if (stop_err != ESP_OK) {

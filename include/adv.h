@@ -32,7 +32,7 @@
 
 #define BLE_ADV_APPEARANCE              0x0547
 #define BLE_MIN_ADV_INTERVAL            0x0020
-#define BLE_MAX_ADV_INTERVAL            0x0040
+#define BLE_MAX_ADV_INTERVAL            0x0030
 
 #define EDDYSTONE_UUID                  0xFEAA
 #define EDDYSTONE_UID_FRAME_TYPE        0x00
@@ -83,7 +83,7 @@ typedef struct {
 eddystone_uid_t ble_adv_create_service_data(int8_t tx_power, int node_id);
 void ble_adv_set_advertisement_data(eddystone_uid_t service_data);
 void ble_adv_set_scan_response_data(int id);
-void ble_adv_start();
-void ble_adv_stop();
+void ble_adv_start(void);
+void ble_adv_stop(void);
 
 #endif
