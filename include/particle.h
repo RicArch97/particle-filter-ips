@@ -29,7 +29,7 @@
 #include "main.h"
 #include "mesh.h"
 
-#define PARTICLE_SET_SIZE       100
+#define PARTICLE_SET_SIZE       500
 #define NO_OF_APS               4
 
 #define AP_MEASUREMENT_NOISE    0.5
@@ -49,12 +49,11 @@ typedef struct {
             float x;
             float y;
         } coord;
-        float speed;
         float angle;
     } state;
     float weight;
 } ble_particle_t;
 
-int ble_particle_update(ble_mesh_ap_states_t *states, int size);
+int ble_particle_update(ble_mesh_ap_t *ap, ble_mesh_node_state_t *node, int size);
 
 #endif

@@ -24,9 +24,36 @@
  */
 
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 #include <sys/time.h>
+#include <unistd.h>
+#include <math.h>
+
+#include <esp_timer.h>
+
+/**
+ * \brief Mix values of 3 given parameters.
+ * http://burtleburtle.net/bob/hash/doobs.html
+ * 
+ * \param a Parameter 1.
+ * \param b Parameter 2.
+ * \param c Parameter 3.
+ * 
+ * \return Mixed value.
+ */
+unsigned long ble_util_mix(unsigned long a, unsigned long b, unsigned long c)
+{
+    a -= b; a -= c; a ^= (c>>13);
+    b -= c; b -= a; b ^= (a<<8);
+    c -= a; c -= b; c ^= (b>>13);
+    a -= b; a -= c; a ^= (c>>12);
+    b -= c; b -= a; b ^= (a<<16);
+    c -= a; c -= b; c ^= (b>>5);
+    a -= b; a -= c; a ^= (c>>3);
+    b -= c; b -= a; b ^= (a<<10);
+    c -= a; c -= b; c ^= (b>>15);
+    return c;
+}
 
 /**
  * \brief Return a random float value between a range.
@@ -40,7 +67,7 @@ float ble_util_rand_float(float min, float max)
 {
     struct timeval tv;
     gettimeofday(&tv, NULL);
-    srand((tv.tv_usec ^ tv.tv_sec));
+    srand(ble_util_mix(clock(), (tv.tv_usec ^ tv.tv_sec), getpid()));
     return min + ((float)rand() / (float)RAND_MAX) * (max - min);
 }
 
@@ -136,4 +163,40 @@ int *ble_util_prime_sieve(int set_size)
 float ble_util_scale(float x, float a, float b, float c, float d)
 {
     return c + ((x - a) * (d - c) / (b - a));
+}
+
+/**
+ * \brief Calculate timedelta between current time and start.
+ * 
+ * \param start_us Pointer to start time in microseconds.
+ * 
+ * \return Timedelta as floating point in seconds.
+ */
+float ble_util_timedelta(int64_t *start_us)
+{
+    if (*start_us == 0)
+        *start_us = esp_timer_get_time();
+
+    // calculate timedelta
+    int64_t current_us = esp_timer_get_time();
+    float dt = (float)((double)(current_us - *start_us) / 1000000);
+    *start_us = current_us;
+
+    return dt;
+}
+
+/**
+ * \brief Calculate tangent of a vector in range 0 .. 2*PI
+ * 
+ * \param y Size in y direction
+ * \param x Size in x direction
+ * 
+ * \return Angle in range 0 .. 2*PI
+ */
+float ble_util_angle_2_pi(float y, float x)
+{
+    float angle = atan2f(y, x);
+    angle = (angle < 0) ? (angle + (2 * M_PI)) : angle;
+
+    return angle;
 }

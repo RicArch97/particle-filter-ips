@@ -41,5 +41,5 @@ void app_main(void)
     ble_adv_set_scan_response_data(NODE_ID);
 
     ble_adv_start();
-    ble_scan_start(3);
+    ble_scan_start(0);
 }

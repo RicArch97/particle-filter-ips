@@ -27,8 +27,20 @@
 #define MESH_H
 
 typedef struct {
+    struct {
+        int x;
+        int y;
+    } pos;
     float node_distance;
-    int id;
-} ble_mesh_ap_states_t;
+} ble_mesh_ap_t;
+
+typedef struct {
+    struct {
+        float x;
+        float y;
+    } coord;
+    float speed;
+    float angle;
+} ble_mesh_node_state_t;
 
 #endif

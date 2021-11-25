@@ -24,14 +24,12 @@
  */
 
 #include <stdlib.h>
+#include <stdint.h>
 #include <math.h>
-#include <time.h>
 
 #include "particle.h"
 #include "rssi.h"
 #include "util.h"
-
-static time_t timer;
 
 /**
  * \brief Uniformly Generate particles across the known area 
@@ -40,7 +38,7 @@ static time_t timer;
  * \return Pointer to an array of uniformly generated particles.
  * Returns NULL on error.
  */
-ble_particle_t *ble_particle_generate(void)
+ble_particle_t *ble_particle_generate(float start_x, float start_y)
 {
     ble_particle_t *particles = calloc(PARTICLE_SET_SIZE, sizeof(ble_particle_t));
     if (particles == NULL)
@@ -74,6 +72,10 @@ ble_particle_t *ble_particle_generate(void)
                 (particles+(p-1))->state.coord.y = scaled_y;
                 break;
             }
+            // random angle in a full circle, in radians
+            (particles+(p-1))->state.angle = ble_util_rand_float(0, (2 * M_PI));
+            // TODO
+            // generated inital weights for all particles
         }
         free(sample);
     }
@@ -88,22 +90,18 @@ ble_particle_t *ble_particle_generate(void)
  * \param p Array with all particles.
  * \param size Array size of particles.
  */
-void ble_particle_state_predict(ble_particle_t *p, int size)
+void ble_particle_state_predict(ble_particle_t *p, float speed, int size)
 {
-    time_t prev_time = timer;
-    time(&timer);
-    // calculate time interval
-    float dt = (float)difftime(timer, prev_time);
-
-    // TODO
-    // estimate next speed
+    static int64_t start_us = 0;
+    // calculate timedelta using high resolution timer
+    float dt = ble_util_timedelta(&start_us);
 
     for (int i = 0; i < size; i++) {
         // calculate translation in x direction using angle alpha (hypotenuse)
-        float shift_x = (p[i].state.speed * dt) * cosf(p[i].state.angle);
+        float shift_x = (speed * dt) * cosf(p[i].state.angle);
         float new_x = p[i].state.coord.x + shift_x + GAUSS_NOISE_X;
         // calculate translation in y direction using angle alpha (hypotenuse)
-        float shift_y = (p[i].state.speed * dt) * sinf(p[i].state.angle);
+        float shift_y = (speed * dt) * sinf(p[i].state.angle);
         float new_y = p[i].state.coord.y + shift_y + GAUSS_NOISE_Y;
         // set new position
         p->state.coord.x = new_x;
@@ -207,22 +205,26 @@ float ble_particle_weight_gain(ble_particle_ap_dist_t *dist, int size)
  * once a new set of RSSI measurements is received.
  * Following Monte Carlo's localization model.
  * 
- * \param states Pointer to an array with RSSI states from all AP's.
+ * \param ap Pointer to an array with ap specific data.
+ * \param node Pointer to struct with current state of the node.
  * \param size Size of the array of RSSI states.
  * 
- * \return 0 on succes, -1 on failure, -2 on initialization error.
+ * \return target state estimation on succes, -1 on failure.
  */
-int ble_particle_update(ble_mesh_ap_states_t *states, int size)
+int ble_particle_update(ble_mesh_ap_t *ap, ble_mesh_node_state_t *node, int size)
 {
     static ble_particle_t *particles = NULL;
+    static ble_mesh_ap_t *prev_ap = NULL;
+    static int64_t start_us = 0;
 
     // generate a new set of particles, uniformly distributed over area
     // only when not yet initialized
     if (particles == NULL) {
-        particles = ble_particle_generate();
+        // weights are initalized based on the starting position of the node
+        particles = ble_particle_generate(node->coord.x, node->coord.y);
         // allocation error
         if (particles == NULL)
-            return -2;
+            return -1;
     }
 
     // allocate memory for distance info
@@ -230,39 +232,66 @@ int ble_particle_update(ble_mesh_ap_states_t *states, int size)
     ble_particle_ap_dist_t *dist = malloc(dist_size);
     if (dist == NULL)
         return -1;
-    /* 
-        assuming our area is rectangualar
-        using Pythagorean theorem: a^2 + b^2 = c^2
-            AP-3 ----- AP-4
-            |           |
-            |           |
-            AP-1 ----- AP-2 
-        */
+
+    // calculate particle distances to AP's
     for (int i = 0; i < PARTICLE_SET_SIZE; i++) {
         for (int j = 0; j < size; j++) {
-            float d_diff_x = particles[i].state.coord.x;
-            float d_diff_y = particles[i].state.coord.y;
-            // the origin is assumed to be at AP-1
-            if ((states[j].id % 2) == 0)
-                d_diff_x = AREA_X - particles[i].state.coord.x;
-            if (states[j].id > 2)
-                d_diff_y = AREA_Y - particles[i].state.coord.y;
-            
+            // use absolute distance to access point, direction not important here
+            float d_diff_x = abs(ap[j].pos.x - particles[i].state.coord.x);
+            float d_diff_y = abs(ap[j].pos.y - particles[i].state.coord.y);
+            // assuming our area is rectangualar
+            // using Pythagorean theorem: a^2 + b^2 = c^2
             (dist+i+j)->d_particle = sqrtf(powf(d_diff_x, 2) + powf(d_diff_y, 2));
-            (dist+i+j)->d_node = states[j].node_distance;
+            (dist+i+j)->d_node = ap[j].node_distance;
         } 
     }
 
-    // calculate effective sample size (ESS) for normalized weights where 
+    // skip if theres are no previous states to compare
+    if (prev_ap != NULL) {
+        float dt = ble_util_timedelta(&start_us);
+        // calculate direction and magnitude of the heading vector
+        // by adding all the vectors pointing to each AP
+        float sum_vec_x = 0, sum_vec_y = 0;
+        for (int i = 0; i < size; i++) {
+            float angle, dy, gradient;
+            // calculate angle from x axis counterclockwise to each AP
+            angle = ble_util_angle_2_pi((ap[i].pos.y - node->coord.y), 
+                        (ap[i].pos.x - node->coord.x));
+            // calculate gradient between previous state and new state
+            dy = ap[i].node_distance - prev_ap[i].node_distance;
+            gradient = dy / dt;
+            // calculate the sum of the x and y vectors
+            sum_vec_x += (gradient * cosf(angle));
+            sum_vec_y += (gradient * sinf(angle));
+        }
+        // update node speed (magnitude of heading vector) and angle estimates
+        // heading angle is not used in PF, but could be used to simulate the node
+        node->speed = sqrtf(powf(sum_vec_x, 2) + powf(sum_vec_y, 2));
+        node->angle = ble_util_angle_2_pi(sum_vec_y, sum_vec_x);
+    }
+
+    // particles move with the same speed as the node
+    ble_particle_state_predict(particles, node->speed, PARTICLE_SET_SIZE);
+    int index = 0;
+    // weight gain per particle (caculated by distance differences)
+    for (int i = 0; i < (size * PARTICLE_SET_SIZE); i += size) {
+        float gain = ble_particle_weight_gain((dist+i), size);
+        // calculate new weight for each particle
+        float new_weight = particles[index].weight * gain;
+        particles[index++].weight = new_weight;
+    }
+    ble_particle_normalize(particles, PARTICLE_SET_SIZE);
+
+    // calculate effective sample size (ESS) for normalized weights where
     // w_i >= 0 and sum(w_i) -> N with i = 1 equals 1
     // ESS = 1 / sum(w_i)^2 -> N
     float sum_weights_pow = 0;
-    for (int i = 0; i < sizeof(particles); i++) {
+    for (int i = 0; i < PARTICLE_SET_SIZE; i++) {
         sum_weights_pow += powf(particles[i].weight, 2);
     }
     float n_eff = 1 / sum_weights_pow;
     // check if we need to resample based on effective sample size
-    if (n_eff < (sizeof(particles) * RATIO_COEFFICIENT)) {
+    if (n_eff < (PARTICLE_SET_SIZE * RATIO_COEFFICIENT)) {
         ble_particle_t *resampled = ble_particle_resample(particles, PARTICLE_SET_SIZE);
         if (resampled == NULL)
             return -1;
@@ -270,21 +299,22 @@ int ble_particle_update(ble_mesh_ap_states_t *states, int size)
         free(particles);
         particles = resampled;
     }
-    else {
-        ble_particle_state_predict(particles, PARTICLE_SET_SIZE);
-        // weight gain per particle
-        for (int i = 0; i < (size * PARTICLE_SET_SIZE); i+=size) {
-            float gain = ble_particle_weight_gain((dist+i), size);
-            // calculate new weight
-            float new_weight = particles[i].weight * gain;
-            particles[i].weight = new_weight;
-        }
-        ble_particle_normalize(particles, PARTICLE_SET_SIZE);
+
+    // average the coordinates of existing particles from their coordinate vectors
+    float sum_coord_x = 0, sum_coord_y = 0;
+    for (int i = 0; i < PARTICLE_SET_SIZE; i++) {
+        sum_coord_x += particles[i].state.coord.x;
+        sum_coord_y += particles[i].state.coord.y;
     }
+    node->coord.x = (sum_coord_x / PARTICLE_SET_SIZE);
+    node->coord.y = (sum_coord_y / PARTICLE_SET_SIZE);
 
-    // TODO
-    // estimate position
-
+    // update previous state
+    if (prev_ap != NULL) {
+        free(prev_ap);
+        prev_ap = ap;
+    }
     free(dist);
+
     return 0;
 }

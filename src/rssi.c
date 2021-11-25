@@ -27,6 +27,7 @@
 #include <math.h>
 
 #include "rssi.h"
+#include "util.h"
 
 /**
  * \brief Calculate a new state from old state & Kalman gain.
@@ -65,12 +66,35 @@ void ble_rssi_kf_estimate(ble_rssi_state_t *s, float m)
  * 
  * \return Measured distance in meters.
  */
-float ble_rssi_to_meters(int rssi, int8_t tx_power)
+float ble_rssi_to_meters(float kalman_rssi, int8_t tx_power)
 {
     // RSSI = -10 * n * log10(d / d0) + A0
     // with d0 measured at 1 meter:
     // d = 10^((A - RSSI) / (10 * n))
-    return powf(10, (float)(tx_power - rssi) / (10 * BLE_ENV_FACTOR_IND));
+    return pow10f((float)(tx_power - kalman_rssi) / (float)(10 * BLE_ENV_FACTOR_IND));
+}
+
+/**
+ * \brief Filter high frequency parts from the smoothed RSSI data.
+ * 
+ * \param rssi_state Kalman smoothed RSSI state value.
+ * 
+ * \return Low-pass filtered RSSI value.
+ */
+float ble_rssi_low_pass_filter(float kalman_rssi)
+{
+    static float prev = 0;
+    static int64_t start_us = 0;
+    // initialize
+    if (prev == 0)
+        prev = kalman_rssi;
+    
+    float dt = ble_util_timedelta(&start_us);
+    // smoothing factor (0 < alpha < 1)
+    float new = prev + ((dt / (kalman_rssi + dt)) * (kalman_rssi - prev));
+    prev = new;
+
+    return new;
 }
 
 /**
@@ -80,21 +104,23 @@ float ble_rssi_to_meters(int rssi, int8_t tx_power)
  */
 void ble_rssi_update(int measurement)
 {
-    static ble_rssi_state_t rssi = {0};
+    static ble_rssi_state_t kalman_rssi = {0};
 
     // initialization
-    if (rssi.m_noise == 0) {
-        rssi.state = measurement;
-        rssi.err_v = 1;
-        rssi.m_noise = 20;
-        rssi.p_noise = 0.0005;
+    if (kalman_rssi.m_noise == 0) {
+        kalman_rssi.state = measurement;
+        kalman_rssi.err_v = 1;
+        kalman_rssi.m_noise = 20;
+        kalman_rssi.p_noise = 0.0010;
     }
     // smooth value using Kalman filter
-    ble_rssi_kf_estimate(&rssi, (float)measurement);
+    ble_rssi_kf_estimate(&kalman_rssi, (float)measurement);
     
     // distance calculation
-    float rssi_m = ble_rssi_to_meters(rssi.state, TX_POWER_ONE_METER);
-    
+    float rssi_m = ble_rssi_to_meters(kalman_rssi.state, TX_POWER_ONE_METER);
+
+    printf("%f\n", ble_rssi_low_pass_filter(rssi_m));
+
     // TODO
     // wrap value in mesh message and send to mesh
 }

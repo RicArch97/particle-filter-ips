@@ -90,8 +90,8 @@ uint16_t little_endian_read_u16(const uint8_t *data, uint8_t p_ctr)
  * 
  * \return 0 on success, -1 on failure.
  */
-int ble_scan_decode_adv(
-    const uint8_t *p_adv_data, uint8_t data_len, ble_scan_rst_pkt_t *rst)
+int ble_scan_decode_adv(const uint8_t *p_adv_data, uint8_t data_len, 
+        ble_scan_rst_pkt_t *rst)
 {
     if (data_len == 0 || p_adv_data == NULL || rst == NULL)
         return -1;
@@ -172,8 +172,8 @@ int ble_scan_decode_adv(
  * 
  * \return 0 on success, -1 on failure.
  */
-int ble_scan_decode_scan_rsp(
-    const uint8_t *p_scan_rsp_data, uint8_t data_len, ble_scan_rst_pkt_t *rst)
+int ble_scan_decode_scan_rsp(const uint8_t *p_scan_rsp_data, uint8_t data_len, 
+        ble_scan_rst_pkt_t *rst)
 {
     if (data_len == 0 || p_scan_rsp_data == NULL || rst == NULL)
         return -1;

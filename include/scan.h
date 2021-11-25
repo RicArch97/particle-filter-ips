@@ -49,10 +49,10 @@ typedef struct {
     } scan_rsp;
 } ble_scan_rst_pkt_t;
 
-int ble_scan_decode_adv(
-    const uint8_t *p_adv_data, uint8_t data_len, ble_scan_rst_pkt_t *rst);
-int ble_scan_decode_scan_rsp(
-    const uint8_t *p_scan_rsp_data, uint8_t data_len, ble_scan_rst_pkt_t *rst);
+int ble_scan_decode_adv(const uint8_t *p_adv_data, uint8_t data_len, 
+        ble_scan_rst_pkt_t *rst);
+int ble_scan_decode_scan_rsp(const uint8_t *p_scan_rsp_data, uint8_t data_len, 
+        ble_scan_rst_pkt_t *rst);
 void ble_scan_start(uint32_t duration);
 void ble_scan_stop(void);
 

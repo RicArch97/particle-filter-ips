@@ -28,13 +28,10 @@
 
 #include <stdint.h>
 
-#define TX_POWER_ONE_METER  -56
+#define TX_POWER_ONE_METER  -60
 #define SIGNAL_LOSS         41
 
-#define BLE_ENV_FACTOR_IND  2
-
-#define M_WEIGHT            0.3
-#define P_WEIGHT            0.3
+#define BLE_ENV_FACTOR_IND  2   
 
 typedef struct {
     float state;
