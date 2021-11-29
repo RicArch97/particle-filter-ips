@@ -211,10 +211,10 @@ float ble_particle_weight_gain(ble_particle_ap_dist_t *dist, int size)
  * 
  * \return target state estimation on succes, -1 on failure.
  */
-int ble_particle_update(ble_mesh_ap_t *ap, ble_mesh_node_state_t *node, int size)
+int ble_particle_update(ble_mqtt_ap_t *ap, ble_mqtt_node_state_t *node, int size)
 {
     static ble_particle_t *particles = NULL;
-    static ble_mesh_ap_t *prev_ap = NULL;
+    static ble_mqtt_ap_t *prev_ap = NULL;
     static int64_t start_us = 0;
 
     // generate a new set of particles, uniformly distributed over area

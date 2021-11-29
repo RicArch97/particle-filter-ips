@@ -1,6 +1,6 @@
 /* 
  * MicroStorm - BLE Tracking
- * include/particle.h
+ * include/wifi.h
  *
  * Copyright (c) 2021 Ricardo Steijn
  *
@@ -23,37 +23,7 @@
  * SOFTWARE.
  */
 
-#ifndef PARTICLE_H
-#define PARTICLE_H
-
-#include "main.h"
-#include "mqtt.h"
-
-#define PARTICLE_SET_SIZE       500
-#define NO_OF_APS               4
-
-#define AP_MEASUREMENT_NOISE    0.5
-#define RATIO_COEFFICIENT       1.2
-
-#define GAUSS_NOISE_X           1
-#define GAUSS_NOISE_Y           1
-
-typedef struct {
-    float d_node;
-    float d_particle;
-} ble_particle_ap_dist_t;
-
-typedef struct {
-    struct {
-        struct {
-            float x;
-            float y;
-        } coord;
-        float angle;
-    } state;
-    float weight;
-} ble_particle_t;
-
-int ble_particle_update(ble_mqtt_ap_t *ap, ble_mqtt_node_state_t *node, int size);
+#ifndef WIFI_H
+#define WIFI_H
 
 #endif

@@ -38,7 +38,7 @@
 static const char *TAG = "controller";
 
 /**
- * \brief Set up a callback to handle GAP events.
+ * \brief Set up a callback to handle GAP events in the GAP event loop.
  * 
  * \param event The event type.
  * \param param GAP parameters that can be checked.
@@ -100,15 +100,13 @@ void ble_controller_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t 
             ESP_LOGE(TAG, "Scanning stop attempt unsuccessful; %s", esp_err_to_name(err));
         break;
     default:
-        ESP_LOGW(TAG, "Unhandled event; %d", event);
+        ESP_LOGW(TAG, "Unhandled GAP event; %d", event);
         break;
     }
 }
 
 /**
  * \brief Initialize the BLE environment.
- * 
- * \param device_name identifier for this device.
  */
 void ble_controller_init(void)
 {

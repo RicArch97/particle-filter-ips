@@ -28,6 +28,8 @@
 
 #include "rssi.h"
 #include "util.h"
+#include "mqtt.h"
+#include "main.h"
 
 /**
  * \brief Calculate a new state from old state & Kalman gain.
@@ -115,12 +117,24 @@ void ble_rssi_update(int measurement)
     }
     // smooth value using Kalman filter
     ble_rssi_kf_estimate(&kalman_rssi, (float)measurement);
-    
     // distance calculation
     float rssi_m = ble_rssi_to_meters(kalman_rssi.state, TX_POWER_ONE_METER);
-
-    printf("%f\n", ble_rssi_low_pass_filter(rssi_m));
-
-    // TODO
-    // wrap value in mesh message and send to mesh
+    // low pass filter go get rid of high frequency spikes
+    float filtered_rssi_m = ble_rssi_low_pass_filter(rssi_m);
+    // store value or publish using MQTT    
+#ifdef HOST
+    ble_mqtt_ap_t host_ap = {
+        .id = ID,
+        .node_distance = filtered_rssi_m,
+        .pos = {.x = POS_X, .y = POS_Y}
+    };
+    ble_mqtt_set_ap_data(host_ap);
+#elif defined(AP)
+    char buffer[20];
+    // %f should provide enough accuracy for our use case
+    sprintf(buffer, "%f", filtered_rssi_m);
+    char *topic = ble_mqtt_create_topic_str(TOPIC_PREFIX, ID);
+    esp_mqtt_client_publish(ble_mqtt_get_client(), topic, buffer, 0, 0, 0);
+    free(topic);
+#endif
 }

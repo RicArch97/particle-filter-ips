@@ -1,6 +1,6 @@
 /* 
  * MicroStorm - BLE Tracking
- * src/mesh.c
+ * include/mqtt.h
  *
  * Copyright (c) 2021 Ricardo Steijn
  *
@@ -23,4 +23,34 @@
  * SOFTWARE.
  */
 
-#include "mesh.h"
+#ifndef MQTT_H
+#define MQTT_H
+
+#include <mqtt_client.h>
+
+#define TOPIC_PREFIX    "ap"
+
+typedef struct {
+    struct {
+        int x;
+        int y;
+    } pos;
+    int id;
+    float node_distance;
+} ble_mqtt_ap_t;
+
+typedef struct {
+    struct {
+        float x;
+        float y;
+    } coord;
+    float speed;
+    float angle;
+} ble_mqtt_node_state_t;
+
+void ble_mqtt_init(void);
+esp_mqtt_client_handle_t ble_mqtt_get_client(void);
+void ble_mqtt_set_ap_data(ble_mqtt_ap_t data);
+char *ble_mqtt_create_topic_str(const char *prefix, int id);
+
+#endif

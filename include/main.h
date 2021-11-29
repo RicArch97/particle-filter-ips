@@ -26,12 +26,31 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-// identifiers of the beacon
-#define COMPANY_NAME    "MicroStorm"
-#define INSTANCE_PREFIX "Node"
+// purpose of this device; can be HOST, AP or NODE
+// HOST is an AP and runs the particle filtering process
+// AP just scans for the node and sends value to an MQTT topic
+// NODE advertises eddystone UID packets
+#define HOST
 
+// ID of this device in range 1 to 4
+#define ID              1
 // area size (rectangle)
 #define AREA_X          3
 #define AREA_Y          2
+// x and y postion of the beacon, within the given area size
+#define POS_X           0
+#define POS_Y           0             
+
+// identifiers of the beacon
+// instance prefix should be max 5 characters
+#define COMPANY_NAME    "MicroStorm"
+#define INSTANCE_PREFIX "Node"
+
+// wifi connection
+#define SSID            "<ssid>"
+#define PSK             "<psk>"
+
+// MQTT
+#define BROKER_ADDRESS  "<addr>"
 
 #endif

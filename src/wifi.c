@@ -1,6 +1,6 @@
 /* 
  * MicroStorm - BLE Tracking
- * include/mesh.h
+ * src/wifi.c
  *
  * Copyright (c) 2021 Ricardo Steijn
  *
@@ -23,24 +23,6 @@
  * SOFTWARE.
  */
 
-#ifndef MESH_H
-#define MESH_H
+#include "wifi.h"
 
-typedef struct {
-    struct {
-        int x;
-        int y;
-    } pos;
-    float node_distance;
-} ble_mesh_ap_t;
-
-typedef struct {
-    struct {
-        float x;
-        float y;
-    } coord;
-    float speed;
-    float angle;
-} ble_mesh_node_state_t;
-
-#endif
+// TODO
