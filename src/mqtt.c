@@ -103,6 +103,7 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
                 data.pos.y = strtof(posy_p, &posy_p);
             }
         }
+        free(tmp_buf);
         ble_mqtt_store_ap_data(data);
 
         // check if we have a value for each AP
