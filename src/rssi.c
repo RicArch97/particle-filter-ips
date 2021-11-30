@@ -128,13 +128,12 @@ void ble_rssi_update(int measurement)
         .node_distance = filtered_rssi_m,
         .pos = {.x = POS_X, .y = POS_Y}
     };
-    ble_mqtt_set_ap_data(host_ap);
+    ble_mqtt_store_ap_data(host_ap);
 #elif defined(AP)
-    char buffer[20];
-    // %f should provide enough accuracy for our use case
-    sprintf(buffer, "%f", filtered_rssi_m);
-    char *topic = ble_mqtt_create_topic_str(TOPIC_PREFIX, ID);
-    esp_mqtt_client_publish(ble_mqtt_get_client(), topic, buffer, 0, 0, 0);
-    free(topic);
+    // construct payload string
+    char *payload;
+    int ret = asprintf(&payload, "%d,%g,%g,%g", ID, filtered_rssi_m, POS_X, POS_Y);
+    if (ret != ESP_FAIL)
+        esp_mqtt_client_publish(ble_mqtt_get_client(), TOPIC, payload, 0, 0, 0);
 #endif
 }

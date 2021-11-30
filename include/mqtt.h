@@ -28,12 +28,12 @@
 
 #include <mqtt_client.h>
 
-#define TOPIC_PREFIX    "ap"
+#define TOPIC    "ap"
 
 typedef struct {
     struct {
-        int x;
-        int y;
+        float x;
+        float y;
     } pos;
     int id;
     float node_distance;
@@ -50,7 +50,6 @@ typedef struct {
 
 void ble_mqtt_init(void);
 esp_mqtt_client_handle_t ble_mqtt_get_client(void);
-void ble_mqtt_set_ap_data(ble_mqtt_ap_t data);
-char *ble_mqtt_create_topic_str(const char *prefix, int id);
+void ble_mqtt_store_ap_data(ble_mqtt_ap_t data);
 
 #endif

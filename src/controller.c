@@ -78,7 +78,7 @@ void ble_controller_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t 
             found_adv = ble_scan_decode_adv(
                 param->scan_rst.ble_adv, param->scan_rst.adv_data_len, &result_pkt);
             // if we didn't find matching advertsing data skip event   
-            if (found_adv != 0)
+            if (found_adv != ESP_OK)
                 return;
             else
                 ble_rssi_update(param->scan_rst.rssi);

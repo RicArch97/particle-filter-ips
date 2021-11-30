@@ -209,7 +209,7 @@ float ble_particle_weight_gain(ble_particle_ap_dist_t *dist, int size)
  * \param node Pointer to struct with current state of the node.
  * \param size Size of the array of RSSI states.
  * 
- * \return target state estimation on succes, -1 on failure.
+ * \return 0 on succes, -1 on failure.
  */
 int ble_particle_update(ble_mqtt_ap_t *ap, ble_mqtt_node_state_t *node, int size)
 {

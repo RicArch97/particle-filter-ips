@@ -25,6 +25,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include <esp_log.h>
 
@@ -34,8 +35,9 @@
 
 static const char *TAG = "mqtt";
 
-static esp_mqtt_client_handle_t client;
 static ble_mqtt_ap_t ap_data[NO_OF_APS];
+static esp_mqtt_client_handle_t client;
+static ble_mqtt_node_state_t node_state;
 static int event_idx = 0;
 
 /**
@@ -53,17 +55,11 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
 
     switch ((esp_mqtt_event_id_t)event_id) {
     case MQTT_EVENT_CONNECTED:
+        ESP_LOGI(TAG, "MQTT client connected");
 #ifdef HOST
-        // host subscribes to specific topics for all access points
-        for (int i = 1; i <= NO_OF_APS; i++) {
-            char *topic = ble_mqtt_create_topic_str(TOPIC_PREFIX, i);
-            if (topic == NULL)
-                break;
-            // in case of receiving values realtime, QoS 0 provides the least overhead
-            // if a value is lost, it doesn't matter as we get a new more up to date value later
-            esp_mqtt_client_subscribe(client, topic, 0);
-            free(topic);
-        }
+        // in case of receiving values realtime, QoS 0 provides the least overhead
+        // if a value is lost, it doesn't matter as we get a new more up to date value later
+        esp_mqtt_client_subscribe(client, TOPIC, 0);
 #endif
         break;
     case MQTT_EVENT_DISCONNECTED:
@@ -73,21 +69,50 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
         ESP_LOGI(TAG, "Subscribe successfull, msg_id=%d", event->msg_id);
         break;
     case MQTT_EVENT_DATA:
-        // only relevant for the host
-        char *ptr = event->topic;
-        int num;
-        while (*ptr) {
-            if (isdigit(*ptr))
-                num = (int)strtol(ptr, &ptr, 10);
-            else
-                ptr++;
-        }
-        if (num < 1 || num > NO_OF_APS)
+#ifdef HOST
+        // check that topic matches
+        if (strcmp(event->topic, TOPIC) != ESP_OK)
             break;
-        // TODO
-        // cache event for each AP
-        // check if there's a value for each AP
-        // update particle filter with data
+        // no commas, incorrect data
+        if (strchr(event->data, ',') == NULL)
+            break;
+
+        char *tmp_buf = strdup(event->data);
+        ble_mqtt_ap_t data = {0};
+        // split data string, delimiter is comma
+        // format: [id,distance,posx,posy]
+        for (int i = 0; i < strlen(tmp_buf); i++) {
+            // split ID
+            char *id_p = strtok(tmp_buf, ",");
+            if (id_p != NULL) {
+                data.id = (int)strtol(id_p, &id_p, 10);
+            }
+            // split distance
+            char *dist_p = strtok(NULL, ",");
+            if (dist_p != NULL) {
+                data.node_distance = strtof(dist_p, &dist_p);
+            }
+            // split posx
+            char *posx_p = strtok(NULL, ",");
+            if (posx_p != NULL) {
+                data.pos.x = strtof(posx_p, &posx_p);
+            }
+            // split posy
+            char *posy_p = strtok(NULL, ",");
+            if (posy_p != NULL) {
+                data.pos.y = strtof(posy_p, &posy_p);
+            }
+        }
+        ble_mqtt_store_ap_data(data);
+
+        // check if we have a value for each AP
+        if (event_idx == (NO_OF_APS - 1)) {
+            if (ble_particle_update(ap_data, &node_state, NO_OF_APS) != ESP_OK)
+                ESP_LOGE(TAG, "Particle filter update failed");
+            // clear cache
+            memset(ap_data, 0, sizeof(ap_data));
+        }        
+#endif
         break;
     case MQTT_EVENT_ERROR:
         if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
@@ -124,6 +149,13 @@ void ble_mqtt_init(void)
     ESP_ERROR_CHECK(esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, 
         ble_mqtt_event_handler, NULL));
     ESP_ERROR_CHECK(esp_mqtt_client_start(client));
+    
+    // initialize node data position (center of the given area by default)
+    // the other elements are 0 by default
+#ifdef HOST
+    node_state.coord.x = AREA_X / 2;
+    node_state.coord.y = AREA_Y / 2;
+#endif
 }
 
 /**
@@ -142,7 +174,7 @@ esp_mqtt_client_handle_t ble_mqtt_get_client(void)
  * 
  * \param data Struct holding the pre-processed RSSI and position.
  */
-void ble_mqtt_set_ap_data(ble_mqtt_ap_t data)
+void ble_mqtt_store_ap_data(ble_mqtt_ap_t data)
 {
     for (int i = 0; i < NO_OF_APS; i++) {
         // we already cached an event from the HOST AP
@@ -157,23 +189,4 @@ void ble_mqtt_set_ap_data(ble_mqtt_ap_t data)
         return;
     else
         ap_data[event_idx++] = data;
-}
-
-/**
- * \brief Create a topic string from an id and prefix.
- * 
- * \param prefix The prefix of the topic.
- * \param id The id of the AP.
- * 
- * \return Pointer the dynamically allocated string.
- */
-char *ble_mqtt_create_topic_str(const char *prefix, int id)
-{
-    char id_buf[2], *topic;
-    sprintf(id_buf, "%d", id);
-    if (asprintf(&topic, "%s%s", prefix, id_buf) == ESP_FAIL) {
-        ESP_LOGE(TAG, "Could not allocate memory for topic name");
-        return NULL;
-    }
-    return topic;
 }

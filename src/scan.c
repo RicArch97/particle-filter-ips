@@ -136,7 +136,7 @@ int ble_scan_decode_adv(const uint8_t *p_adv_data, uint8_t data_len,
                 return -1;
             // compare namespace to the first 10 characters to our hash   
             if (memcmp(rst->adv.uid_beacon.namespace_id, nsp_hash, 
-                    EDDYSTONE_UID_NSP_LEN) != 0) {
+                    EDDYSTONE_UID_NSP_LEN) != ESP_OK) {
                 free(nsp_hash);
                 return -1;
             }
@@ -148,7 +148,7 @@ int ble_scan_decode_adv(const uint8_t *p_adv_data, uint8_t data_len,
             // null terminate the string
             rst->adv.uid_beacon.instance_id[EDDYSTONE_UID_INST_LEN] = '\0';
             if (strncmp(rst->adv.uid_beacon.instance_id, INSTANCE_PREFIX, 
-                    strlen(INSTANCE_PREFIX)) != 0)
+                    strlen(INSTANCE_PREFIX)) != ESP_OK)
                 return -1;
             break;
         default:
