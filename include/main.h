@@ -32,25 +32,33 @@
 // NODE advertises eddystone UID packets
 #define HOST
 
-// ID of this device in range 1 to 4
+// ID of this device 
+// in range 1 to 4 for HOST + AP
+// in range 0 to 9 for NODE
 #define ID              1
 // area size (rectangle)
 #define AREA_X          3
 #define AREA_Y          2
-// x and y postion of the beacon, within the given area size
-#define POS_X           0
-#define POS_Y           0             
+// x and y postion of the beacon, within the given area size (float)
+#define POS_X           0.0
+#define POS_Y           0.0            
 
 // identifiers of the beacon
 // instance prefix should be max 5 characters
 #define COMPANY_NAME    "MicroStorm"
 #define INSTANCE_PREFIX "Node"
 
-// wifi connection
+// wifi connection, PSK is WPA2
 #define SSID            "<ssid>"
 #define PSK             "<psk>"
 
-// MQTT
-#define BROKER_ADDRESS  "<addr>"
+// MQTT local moquitto broker
+// host is the ip4 address where mosquitto is running
+// username and password are set up in a password file
+// see: man 5 mosquitto.conf
+#define BROKER_HOST     "<x.x.x.x>"
+#define BROKER_PORT     1883
+#define BROKER_USERNAME "<username>"
+#define BROKER_PASSWORD "<password>"
 
 #endif

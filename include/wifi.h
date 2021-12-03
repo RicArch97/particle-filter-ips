@@ -26,4 +26,13 @@
 #ifndef WIFI_H
 #define WIFI_H
 
+#include <esp_bit_defs.h>
+
+#define WIFI_MAX_CONN_RETRIES   3
+
+#define WIFI_CONNECTED_BIT      BIT0
+#define WIFI_FAIL_BIT           BIT1
+
+void ble_wifi_init(void);
+
 #endif

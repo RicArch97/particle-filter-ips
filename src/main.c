@@ -25,21 +25,27 @@
 
 #include <stdint.h>
 
+#include "main.h"
 #include "adv.h"
 #include "controller.h"
 #include "scan.h"
 #include "rssi.h"
-
-#define NODE_ID     1
+#include "mqtt.h"
 
 void app_main(void)
 {
+    // initalize ble controller
     ble_controller_init();
-    
+#ifdef NODE
+    // set advertisment data
     ble_adv_set_advertisement_data(
-       ble_adv_create_service_data((TX_POWER_ONE_METER + SIGNAL_LOSS), NODE_ID));
-    ble_adv_set_scan_response_data(NODE_ID);
-
+       ble_adv_create_service_data((TX_POWER_ONE_METER + SIGNAL_LOSS), ID));
+    // start advertising between 32-48 ms interval
     ble_adv_start();
+#elif defined(AP) || defined(HOST)
+    // connect to wifi & MQTT broker
+    ble_mqtt_init();
+    // start scanning indefinitely at 16 ms interval, with 16 ms duration
     ble_scan_start(0);
+#endif
 }

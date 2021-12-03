@@ -32,13 +32,30 @@
 #include "mqtt.h"
 #include "main.h"
 #include "particle.h"
+#include "wifi.h"
 
 static const char *TAG = "mqtt";
 
-static ble_mqtt_ap_t ap_data[NO_OF_APS];
 static esp_mqtt_client_handle_t client;
+#ifdef HOST
+static ble_mqtt_ap_t ap_data[NO_OF_APS];
 static ble_mqtt_node_state_t node_state;
 static int event_idx = 0;
+#endif
+
+
+/**
+ * \brief Log error if it is non zero.
+ * 
+ * \param message Error message to be logged.
+ * \param error_code Error code to be logged.
+ */
+void log_error_if_nonzero(const char *message, int error_code)
+{
+    if (error_code != 0) {
+        ESP_LOGE(TAG, "Last error %s: 0x%x", message, error_code);
+    }
+}
 
 /**
  * \brief Handler for MQTT events in the MQTT event loop.
@@ -63,7 +80,7 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
 #endif
         break;
     case MQTT_EVENT_DISCONNECTED:
-        ESP_LOGI(TAG, "MQTT client disconnected");
+        ESP_LOGW(TAG, "MQTT client disconnected");
         break;
     case MQTT_EVENT_SUBSCRIBED:
         ESP_LOGI(TAG, "Subscribe successfull, msg_id=%d", event->msg_id);
@@ -137,16 +154,21 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
  * \brief Initialize MQTT broker connection and event loop.
  */
 void ble_mqtt_init(void)
-{
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    
-    // TODO
+{   
     // connect to wifi
-    
+    ble_wifi_init();
+
     // create client
-    esp_mqtt_client_config_t mqtt_cfg = {.uri = BROKER_ADDRESS};
+    esp_mqtt_client_config_t mqtt_cfg = {
+        .host = BROKER_HOST,
+        .port = BROKER_PORT,
+        .transport = MQTT_TRANSPORT_OVER_TCP,
+        .username = BROKER_USERNAME,
+        .password = BROKER_PASSWORD
+    };
     client = esp_mqtt_client_init(&mqtt_cfg);
+    
+    // subscribe to events
     ESP_ERROR_CHECK(esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, 
         ble_mqtt_event_handler, NULL));
     ESP_ERROR_CHECK(esp_mqtt_client_start(client));
@@ -172,11 +194,13 @@ esp_mqtt_client_handle_t ble_mqtt_get_client(void)
 /**
  * \brief Cache new AP data.
  * The HOST AP caches the data directly instead of publishing via MQTT.
+ * This function is only relevant for the HOST device.
  * 
  * \param data Struct holding the pre-processed RSSI and position.
  */
 void ble_mqtt_store_ap_data(ble_mqtt_ap_t data)
 {
+#ifdef HOST
     for (int i = 0; i < NO_OF_APS; i++) {
         // we already cached an event from the HOST AP
         // replace it with the newer data for better accuracy
@@ -190,4 +214,5 @@ void ble_mqtt_store_ap_data(ble_mqtt_ap_t data)
         return;
     else
         ap_data[event_idx++] = data;
+#endif
 }

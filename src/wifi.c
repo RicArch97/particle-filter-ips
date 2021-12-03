@@ -23,6 +23,112 @@
  * SOFTWARE.
  */
 
-#include "wifi.h"
+#include <stdint.h>
 
-// TODO
+#include <esp_log.h>
+#include <esp_wifi.h>
+#include <freertos/event_groups.h>
+
+#include "wifi.h"
+#include "main.h"
+
+static const char *TAG = "wifi";
+
+static EventGroupHandle_t wifi_event_group;
+static int conn_retries = 0;
+
+/**
+ * \brief Handler for Wifi events.
+ * 
+ * \param arg extra argument passed to the handler.
+ * \param event_base Event base for the handler.
+ * \param event_id The id for the received event.
+ * \param event_data The data for the event.
+ */
+void ble_wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, 
+        void *event_data)
+{
+    ip_event_got_ip_t *event;
+
+    switch(event_id) {
+    case WIFI_EVENT_STA_START:
+        ESP_LOGI(TAG, "Wifi connecting");
+        esp_wifi_connect();
+        break;
+    case WIFI_EVENT_STA_DISCONNECTED:
+        if (conn_retries < WIFI_MAX_CONN_RETRIES) {
+            esp_wifi_connect();
+            conn_retries++;
+            ESP_LOGW(TAG, "Wifi disconnected, reconnection attempt %d/%d", 
+                conn_retries, WIFI_MAX_CONN_RETRIES);
+        } 
+        else {
+            ESP_LOGW(TAG, "Wifi connection failed");
+            xEventGroupSetBits(wifi_event_group, WIFI_FAIL_BIT);
+        }
+        break;
+    case WIFI_EVENT_STA_CONNECTED:
+        ESP_LOGI(TAG, "Wifi connection successful");
+        break;
+    case IP_EVENT_STA_GOT_IP:
+        event = (ip_event_got_ip_t*) event_data;
+        ESP_LOGI(TAG, "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
+        xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
+        break;
+    default:
+        ESP_LOGW(TAG, "Unhandled wifi event; %d", event_id);
+        break;
+    }
+}
+
+/**
+ * \brief Initialize wifi connection and event loop.
+ */
+void ble_wifi_init(void)
+{
+    wifi_event_group = xEventGroupCreate();
+
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_create_default_wifi_sta();
+    
+    // create wifi init config (default)
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    // subscribe to events
+    esp_event_handler_instance_t inst_any_id;
+    esp_event_handler_instance_t inst_got_ip;
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, 
+        &ble_wifi_event_handler, NULL, &inst_any_id));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, 
+        &ble_wifi_event_handler, NULL, &inst_got_ip));
+
+    // configure wifi
+    wifi_config_t wifi_config = {
+        .sta = {
+            .ssid = SSID,
+            .password = PSK,
+            .threshold = {.authmode = WIFI_AUTH_WPA2_PSK},
+            .pmf_cfg = {.capable = 1, .required = 0}
+        }
+    };
+    // station mode (client)
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+    ESP_ERROR_CHECK(esp_wifi_start());
+
+    // wait until connection established
+    EventBits_t bits = xEventGroupWaitBits(wifi_event_group, 
+        WIFI_CONNECTED_BIT | WIFI_FAIL_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+    // check return value
+    if (bits & WIFI_CONNECTED_BIT)
+        ESP_LOGI(TAG, "Connected to SSID: %s", SSID);
+    if (bits & WIFI_FAIL_BIT)
+        ESP_LOGW(TAG, "Could not connect to SSID: %s", SSID);
+    
+    // we don't need to listen to events anymore after connection established
+    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, inst_any_id));
+    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, inst_got_ip));
+    vEventGroupDelete(wifi_event_group);
+}
