@@ -111,9 +111,9 @@ void ble_rssi_update(int measurement)
     // initialization
     if (kalman_rssi.m_noise == 0) {
         kalman_rssi.state = measurement;
-        kalman_rssi.err_v = 1;
-        kalman_rssi.m_noise = 20;
-        kalman_rssi.p_noise = 0.0010;
+        kalman_rssi.err_v = ERROR_VARIANCE_P;
+        kalman_rssi.m_noise = MEASUREMENT_NOISE_R;
+        kalman_rssi.p_noise = PROCESS_NOISE_Q;
     }
     // smooth value using Kalman filter
     ble_rssi_kf_estimate(&kalman_rssi, (float)measurement);
@@ -121,7 +121,7 @@ void ble_rssi_update(int measurement)
     float rssi_m = ble_rssi_to_meters(kalman_rssi.state, TX_POWER_ONE_METER);
     // low pass filter go get rid of high frequency spikes
     float filtered_rssi_m = ble_rssi_low_pass_filter(rssi_m);
-    // store value or publish using MQTT    
+    // store value or publish using MQTT 
 #ifdef HOST
     ble_mqtt_ap_t host_ap = {
         .id = ID,
@@ -133,7 +133,10 @@ void ble_rssi_update(int measurement)
     // construct payload string
     char *payload;
     int ret = asprintf(&payload, "%d,%g,%g,%g", ID, filtered_rssi_m, POS_X, POS_Y);
-    if (ret != ESP_FAIL)
-        esp_mqtt_client_publish(ble_mqtt_get_client(), TOPIC, payload, 0, 0, 0);
+    if (ret != ESP_FAIL) {
+        if (ble_mqtt_get_state() == MQTT_STATE_CONNECTED)
+            esp_mqtt_client_publish(ble_mqtt_get_client(), TOPIC, payload, 0, 0, 0);
+        free(payload);
+    }
 #endif
 }

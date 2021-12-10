@@ -33,6 +33,15 @@
 
 #define BLE_ENV_FACTOR_IND  2   
 
+// Kalman filter tuning parameters
+// P is calculated every iteration and is initialized at 1
+// R is the standard deviation in db in stable state
+// Q is a factor determinated by trial and error
+// The Q factor determines the responsiveness of the filter
+#define ERROR_VARIANCE_P    1
+#define MEASUREMENT_NOISE_R 20
+#define PROCESS_NOISE_Q     0.01   
+
 typedef struct {
     float state;
     float p_noise;

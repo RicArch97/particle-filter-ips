@@ -27,8 +27,9 @@
 #define WIFI_H
 
 #include <esp_bit_defs.h>
+#include <esp_wifi.h>
 
-#define WIFI_MAX_CONN_RETRIES   3
+#define WIFI_MAX_CONN_RETRIES   7
 
 #define WIFI_CONNECTED_BIT      BIT0
 #define WIFI_FAIL_BIT           BIT1

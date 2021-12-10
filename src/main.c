@@ -40,6 +40,8 @@ void app_main(void)
     // set advertisment data
     ble_adv_set_advertisement_data(
        ble_adv_create_service_data((TX_POWER_ONE_METER + SIGNAL_LOSS), ID));
+    // set scan response data (not relevent for project, but can be seen by Nordic app)
+    ble_adv_set_scan_response_data(ID);
     // start advertising between 32-48 ms interval
     ble_adv_start();
 #elif defined(AP) || defined(HOST)

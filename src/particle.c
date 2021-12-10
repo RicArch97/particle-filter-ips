@@ -32,59 +32,6 @@
 #include "util.h"
 
 /**
- * \brief Uniformly Generate particles across the known area 
- * using Halton sequence. https://en.wikipedia.org/wiki/Halton_sequence
- * 
- * \return Pointer to an array of uniformly generated particles.
- * Returns NULL on error.
- */
-ble_particle_t *ble_particle_generate(float start_x, float start_y)
-{
-    ble_particle_t *particles = calloc(PARTICLE_SET_SIZE, sizeof(ble_particle_t));
-    if (particles == NULL)
-        return NULL;
-    
-    // sample points using Halton sequence
-    int size = PARTICLE_SET_SIZE + 1, dim = 2;
-    float scaled_x, scaled_y;
-    // get N prime numbers using Sieve of Eratosthenes
-    // we only need 2 here, as our dimensions are 2D
-    int *primes = ble_util_prime_sieve(dim);
-    if (primes == NULL)
-        return NULL;
-    // generate van der corput samples
-    for (int i = 0; i < dim; i++) {
-        float *sample = ble_util_corput(size, primes[i]);
-        if (sample == NULL) {
-            free(primes);
-            return NULL;
-        }
-        // save x and y coordiantes respectively
-        // scale values from (0,0 -> 1,1) to our area
-        for (int p = 1; p < size; p++) {
-            switch(i) {
-            case 0:
-                scaled_x = ble_util_scale(sample[p], 0, 1, 0, AREA_X);
-                (particles+(p-1))->state.coord.x = scaled_x;
-                break;
-            case 1:
-                scaled_y = ble_util_scale(sample[p], 0, 1, 0, AREA_Y);
-                (particles+(p-1))->state.coord.y = scaled_y;
-                break;
-            }
-            // random angle in a full circle, in radians
-            (particles+(p-1))->state.angle = ble_util_rand_float(0, (2 * M_PI));
-            // TODO
-            // generated inital weights for all particles
-        }
-        free(sample);
-    }
-    free(primes);
-
-    return particles;
-}
-
-/**
  * \brief Predict a new state for all particles.
  * 
  * \param p Array with all particles.
@@ -100,12 +47,17 @@ void ble_particle_state_predict(ble_particle_t *p, float speed, int size)
         // calculate translation in x direction using angle alpha (hypotenuse)
         float shift_x = (speed * dt) * cosf(p[i].state.angle);
         float new_x = p[i].state.coord.x + shift_x + GAUSS_NOISE_X;
+        // don't update when outside of x area bounds
+        if (new_x > 0 && new_x < AREA_X) {
+            p->state.coord.x = new_x;
+        }
         // calculate translation in y direction using angle alpha (hypotenuse)
         float shift_y = (speed * dt) * sinf(p[i].state.angle);
         float new_y = p[i].state.coord.y + shift_y + GAUSS_NOISE_Y;
-        // set new position
-        p->state.coord.x = new_x;
-        p->state.coord.y = new_y;
+        // don't update when outside of y area bounds
+        if (new_y > 0 && new_y < AREA_Y) {
+           p->state.coord.y = new_y; 
+        }
     }
 }
 
@@ -127,6 +79,74 @@ void ble_particle_normalize(ble_particle_t *arr, int size)
     for (int i = 0; i < size; i++) {
         arr[i].weight = arr[i].weight / sum;
     }
+}
+
+/**
+ * \brief Uniformly Generate particles across the known area 
+ * using Halton sequence. https://en.wikipedia.org/wiki/Halton_sequence
+ * 
+ * \return Pointer to an array of uniformly generated particles.
+ * Returns NULL on error.
+ */
+ble_particle_t *ble_particle_generate(float start_x, float start_y)
+{
+    ble_particle_t *particles = calloc(PARTICLE_SET_SIZE, sizeof(ble_particle_t));
+    if (particles == NULL)
+        return NULL;
+
+    int size = PARTICLE_SET_SIZE + 1, dim = 2;
+    float scaled_x, scaled_y;
+    // get N prime numbers using Sieve of Eratosthenes
+    // we only need 2 here, as our dimensions are 2D
+    int *primes = ble_util_prime_sieve(dim);
+    if (primes == NULL)
+        return NULL;
+    // generate van der corput samples
+    for (int i = 0; i < dim; i++) {
+        float *sample = ble_util_corput(size, primes[i]);
+        if (sample == NULL) {
+            free(primes);
+            return NULL;
+        }
+        // save x and y coordinates respectively
+        // scale values from (0,0 -> 1,1) to our area
+        for (int p = 1; p < size; p++) {
+            switch(i) {
+            case 0:
+                scaled_x = ble_util_scale(sample[p], 0, 1, 0, AREA_X);
+                (particles+(p-1))->state.coord.x = scaled_x;
+                break;
+            case 1:
+                scaled_y = ble_util_scale(sample[p], 0, 1, 0, AREA_Y);
+                (particles+(p-1))->state.coord.y = scaled_y;
+                break;
+            }
+        }
+        free(sample);
+    }
+    // generate weights using the coordinates and angle
+    for (int i = 0; i < PARTICLE_SET_SIZE; i++) {
+        float weight_x, weight_y, max_x, max_y;
+        float p_x = particles[i].state.coord.x;
+        float p_y = particles[i].state.coord.y;
+        // random angle in a full circle, in radians
+        particles[i].state.angle = ble_util_rand_float(0, (2 * M_PI));
+        // max distance depending on pos of particle compared to start
+        max_x = (p_x < start_x) ? start_x : (AREA_X - start_x);
+        max_y = (p_y < start_y) ? start_y : (AREA_Y - start_y);
+        // calculate the weights using the distance between particle and start
+        // and the max distance from the start point to the area bound
+        weight_x = ble_util_scale(fabs(start_x - p_x), 0, max_x, 0, 1);
+        weight_y = ble_util_scale(fabs(start_y - p_y), 0, max_y, 0, 1);
+        // use Pythagorean theorem to calculate hypotenuse
+        particles[i].weight = sqrtf(powf(weight_x, 2) + powf(weight_y, 2));
+    }
+    // normalize weights so that sum equals 1
+    ble_particle_normalize(particles, PARTICLE_SET_SIZE);
+    
+    free(primes);
+
+    return particles;
 }
 
 /**
@@ -237,8 +257,8 @@ int ble_particle_update(ble_mqtt_ap_t *ap, ble_mqtt_node_state_t *node, int size
     for (int i = 0; i < PARTICLE_SET_SIZE; i++) {
         for (int j = 0; j < size; j++) {
             // use absolute distance to access point, direction not important here
-            float d_diff_x = abs(ap[j].pos.x - particles[i].state.coord.x);
-            float d_diff_y = abs(ap[j].pos.y - particles[i].state.coord.y);
+            float d_diff_x = fabs(ap[j].pos.x - particles[i].state.coord.x);
+            float d_diff_y = fabs(ap[j].pos.y - particles[i].state.coord.y);
             // assuming our area is rectangualar
             // using Pythagorean theorem: a^2 + b^2 = c^2
             (dist+i+j)->d_particle = sqrtf(powf(d_diff_x, 2) + powf(d_diff_y, 2));

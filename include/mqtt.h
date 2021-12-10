@@ -28,7 +28,12 @@
 
 #include <mqtt_client.h>
 
-#define TOPIC    "ap"
+#define TOPIC           "ap"
+#define KEEPALIVE       60
+#define RECONNECT       1000
+#define NETWORK_TIMEOUT 20000
+
+#define RECONNECT_MAX   3
 
 typedef struct {
     struct {
@@ -48,6 +53,12 @@ typedef struct {
     float angle;
 } ble_mqtt_node_state_t;
 
+typedef enum {
+    MQTT_STATE_DISCONNECTED = 0,
+    MQTT_STATE_CONNECTED = 1
+} mqtt_state_t;
+
+mqtt_state_t ble_mqtt_get_state(void);
 void ble_mqtt_init(void);
 esp_mqtt_client_handle_t ble_mqtt_get_client(void);
 void ble_mqtt_store_ap_data(ble_mqtt_ap_t data);

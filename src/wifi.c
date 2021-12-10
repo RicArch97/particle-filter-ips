@@ -50,12 +50,11 @@ void ble_wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t even
 {
     ip_event_got_ip_t *event;
 
-    switch(event_id) {
-    case WIFI_EVENT_STA_START:
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         ESP_LOGI(TAG, "Wifi connecting");
         esp_wifi_connect();
-        break;
-    case WIFI_EVENT_STA_DISCONNECTED:
+    }
+    else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         if (conn_retries < WIFI_MAX_CONN_RETRIES) {
             esp_wifi_connect();
             conn_retries++;
@@ -66,18 +65,14 @@ void ble_wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t even
             ESP_LOGW(TAG, "Wifi connection failed");
             xEventGroupSetBits(wifi_event_group, WIFI_FAIL_BIT);
         }
-        break;
-    case WIFI_EVENT_STA_CONNECTED:
+    }
+    else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_CONNECTED)
         ESP_LOGI(TAG, "Wifi connection successful");
-        break;
-    case IP_EVENT_STA_GOT_IP:
+    else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
+        conn_retries = 0;
         xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
-        break;
-    default:
-        ESP_LOGW(TAG, "Unhandled wifi event; %d", event_id);
-        break;
     }
 }
 
@@ -126,9 +121,4 @@ void ble_wifi_init(void)
         ESP_LOGI(TAG, "Connected to SSID: %s", SSID);
     if (bits & WIFI_FAIL_BIT)
         ESP_LOGW(TAG, "Could not connect to SSID: %s", SSID);
-    
-    // we don't need to listen to events anymore after connection established
-    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, inst_any_id));
-    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, inst_got_ip));
-    vEventGroupDelete(wifi_event_group);
 }

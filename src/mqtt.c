@@ -37,12 +37,13 @@
 static const char *TAG = "mqtt";
 
 static esp_mqtt_client_handle_t client;
+static mqtt_state_t mqtt_state = MQTT_STATE_DISCONNECTED;
+static int reconnect_tries = 0;
 #ifdef HOST
 static ble_mqtt_ap_t ap_data[NO_OF_APS];
 static ble_mqtt_node_state_t node_state;
 static int event_idx = 0;
 #endif
-
 
 /**
  * \brief Log error if it is non zero.
@@ -50,7 +51,7 @@ static int event_idx = 0;
  * \param message Error message to be logged.
  * \param error_code Error code to be logged.
  */
-void log_error_if_nonzero(const char *message, int error_code)
+void ble_mqtt_log_if_nonzero(const char *message, int error_code)
 {
     if (error_code != 0) {
         ESP_LOGE(TAG, "Last error %s: 0x%x", message, error_code);
@@ -73,6 +74,8 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
     switch ((esp_mqtt_event_id_t)event_id) {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT client connected");
+        mqtt_state = MQTT_STATE_CONNECTED;
+        reconnect_tries = 0;
 #ifdef HOST
         // in case of receiving values realtime, QoS 0 provides the least overhead
         // if a value is lost, it doesn't matter as we get a new more up to date value later
@@ -81,6 +84,12 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGW(TAG, "MQTT client disconnected");
+        mqtt_state = MQTT_STATE_DISCONNECTED;
+        reconnect_tries++;
+        // reconnection isn't possible, and we also didn't get a wifi disconnect event
+        // wifi might be frozen so try to reconnecting wifi first
+        if (reconnect_tries == RECONNECT_MAX)
+            esp_wifi_connect();
         break;
     case MQTT_EVENT_SUBSCRIBED:
         ESP_LOGI(TAG, "Subscribe successfull, msg_id=%d", event->msg_id);
@@ -88,19 +97,17 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
     case MQTT_EVENT_DATA:
 #ifdef HOST
         // check that topic matches
-        if (strcmp(event->topic, TOPIC) != ESP_OK)
-            break;
-        // no commas, incorrect data
-        if (strchr(event->data, ',') == NULL)
+        if (strncmp(event->topic, TOPIC, event->topic_len) != ESP_OK)
             break;
 
-        char *tmp_buf = strdup(event->data);
+        char *data_buf = strndup(event->data, event->data_len);
         ble_mqtt_ap_t data = {0};
         // split data string, delimiter is comma
         // format: [id,distance,posx,posy]
-        for (int i = 0; i < strlen(tmp_buf); i++) {
+        printf("%s\n", data_buf);
+        for (int i = 0; i < strlen(data_buf); i++) {
             // split ID
-            char *id_p = strtok(tmp_buf, ",");
+            char *id_p = strtok(data_buf, ",");
             if (id_p != NULL) {
                 data.id = (int)strtol(id_p, &id_p, 10);
             }
@@ -120,7 +127,7 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
                 data.pos.y = strtof(posy_p, &posy_p);
             }
         }
-        free(tmp_buf);
+        free(data_buf);
         ble_mqtt_store_ap_data(data);
 
         // check if we have a value for each AP
@@ -132,13 +139,18 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
         }        
 #endif
         break;
+    case MQTT_EVENT_BEFORE_CONNECT:
+        ESP_LOGI(TAG, "Attempting to connect to MQTT broker");
+        break;
     case MQTT_EVENT_ERROR:
+        ESP_LOGI(TAG, "Connect return: (%s)", 
+            strerror(event->error_handle->connect_return_code));
         if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
-            log_error_if_nonzero("Reported from esp-tls", 
+            ble_mqtt_log_if_nonzero("Reported from esp-tls", 
                 event->error_handle->esp_tls_last_esp_err);
-            log_error_if_nonzero("reported from tls stack", 
+            ble_mqtt_log_if_nonzero("reported from tls stack", 
                 event->error_handle->esp_tls_stack_err);
-            log_error_if_nonzero("Captured as transport's socket errno",  
+            ble_mqtt_log_if_nonzero("Captured as transport's socket errno",  
                 event->error_handle->esp_transport_sock_errno);
             ESP_LOGI(TAG, "Last errno string (%s)", 
                 strerror(event->error_handle->esp_transport_sock_errno));
@@ -148,6 +160,16 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
         ESP_LOGW(TAG, "Unhandled MQTT event; %d", event->event_id);
         break;
     }
+}
+
+/**
+ * \brief Get the MQTT client state.
+ * 
+ * \return MQTT_STATE_DISCONNECTED or MQTT_STATE_CONNECTED.
+ */
+mqtt_state_t ble_mqtt_get_state(void)
+{
+    return mqtt_state;
 }
 
 /**
@@ -164,7 +186,10 @@ void ble_mqtt_init(void)
         .port = BROKER_PORT,
         .transport = MQTT_TRANSPORT_OVER_TCP,
         .username = BROKER_USERNAME,
-        .password = BROKER_PASSWORD
+        .password = BROKER_PASSWORD,
+        .keepalive = KEEPALIVE,
+        .reconnect_timeout_ms = RECONNECT,
+        .network_timeout_ms = NETWORK_TIMEOUT
     };
     client = esp_mqtt_client_init(&mqtt_cfg);
     
