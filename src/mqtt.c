@@ -28,6 +28,7 @@
 #include <ctype.h>
 
 #include <esp_log.h>
+#include <freertos/FreeRTOS.h>
 
 #include "mqtt.h"
 #include "main.h"
@@ -39,9 +40,12 @@ static const char *TAG = "mqtt";
 static esp_mqtt_client_handle_t client;
 static mqtt_state_t mqtt_state = MQTT_STATE_DISCONNECTED;
 static int reconnect_tries = 0;
+
 #ifdef HOST
 static ble_mqtt_ap_t ap_data[NO_OF_APS];
 static ble_mqtt_node_state_t node_state;
+static ble_mqtt_pf_data_t pf_data;
+static SemaphoreHandle_t xSemaphore = NULL;
 static int event_idx = 0;
 #endif
 
@@ -56,6 +60,33 @@ void ble_mqtt_log_if_nonzero(const char *message, int error_code)
     if (error_code != 0) {
         ESP_LOGE(TAG, "Last error %s: 0x%x", message, error_code);
     }
+}
+
+/**
+ * \brief Task that updates the particle filter with new data upon receiving new events.
+ * 
+ * \param pv_params Parameter provided to XTaskCreate.
+ */ 
+void ble_mqtt_update_pf_task(void *pv_params)
+{
+#ifdef HOST
+    ble_mqtt_pf_data_t *data = (ble_mqtt_pf_data_t*)pv_params;
+    // try to take the semaphore to write to memory
+    // the node state is updated within tasks and only 1 task can access it at a time
+    // if the semaphore cannot be taken for the duration of 10 ticks, skip this update
+    if (xSemaphoreTake(xSemaphore, (TickType_t)10) == pdTRUE) {
+        // update particle filter
+        if (ble_particle_update(data) != ESP_OK)
+            ESP_LOGE(TAG, "Particle filter update failed");
+        // return access to the resource
+        xSemaphoreGive(xSemaphore);
+    }
+    else
+        ESP_LOGW(TAG, "Unable to take semaphore for particle filter update");
+
+    // delete task after it is done, as it should only run once
+    vTaskDelete(NULL);
+#endif
 }
 
 /**
@@ -75,7 +106,6 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT client connected");
         mqtt_state = MQTT_STATE_CONNECTED;
-        reconnect_tries = 0;
 #ifdef HOST
         // in case of receiving values realtime, QoS 0 provides the least overhead
         // if a value is lost, it doesn't matter as we get a new more up to date value later
@@ -88,8 +118,10 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
         reconnect_tries++;
         // reconnection isn't possible, and we also didn't get a wifi disconnect event
         // wifi might be frozen so try to reconnecting wifi first
-        if (reconnect_tries == RECONNECT_MAX)
+        if (reconnect_tries == RECONNECT_MAX) {
             esp_wifi_connect();
+            reconnect_tries = 0;
+        }
         break;
     case MQTT_EVENT_SUBSCRIBED:
         ESP_LOGI(TAG, "Subscribe successfull, msg_id=%d", event->msg_id);
@@ -104,7 +136,6 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
         ble_mqtt_ap_t data = {0};
         // split data string, delimiter is comma
         // format: [id,distance,posx,posy]
-        printf("%s\n", data_buf);
         for (int i = 0; i < strlen(data_buf); i++) {
             // split ID
             char *id_p = strtok(data_buf, ",");
@@ -131,10 +162,15 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
         ble_mqtt_store_ap_data(data);
 
         // check if we have a value for each AP
-        if (event_idx == (NO_OF_APS - 1)) {
-            if (ble_particle_update(ap_data, &node_state, NO_OF_APS) != ESP_OK)
-                ESP_LOGE(TAG, "Particle filter update failed");
-            // clear cache
+        if (event_idx == NO_OF_APS) {
+            memcpy(pf_data.aps, ap_data, sizeof(ap_data));
+            pf_data.node = &node_state;
+            // create task for particle update to prevent exceeding watchdog timer
+            TaskHandle_t xHandle = NULL;
+            xTaskCreate(ble_mqtt_update_pf_task, PF_TASK_NAME, PF_TASK_SIZE, 
+                &pf_data, PF_TASK_PRIO, &xHandle);
+            // reset counter & clear buffer
+            event_idx = 0;
             memset(ap_data, 0, sizeof(ap_data));
         }        
 #endif
@@ -197,12 +233,19 @@ void ble_mqtt_init(void)
     ESP_ERROR_CHECK(esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, 
         ble_mqtt_event_handler, NULL));
     ESP_ERROR_CHECK(esp_mqtt_client_start(client));
-    
+#ifdef HOST
     // initialize node data position (center of the given area by default)
     // the other elements are 0 by default
-#ifdef HOST
     node_state.coord.x = AREA_X / 2;
     node_state.coord.y = AREA_Y / 2;
+
+    // initialize mutex semaphore
+    xSemaphore = xSemaphoreCreateMutex();
+    if (xSemaphore == NULL) {
+        ESP_ERROR_CHECK(esp_mqtt_client_stop(client));
+        ESP_ERROR_CHECK(esp_wifi_stop());
+        ESP_LOGE(TAG, "Unable to create semaphore, closing connections");
+    }
 #endif
 }
 
@@ -235,7 +278,7 @@ void ble_mqtt_store_ap_data(ble_mqtt_ap_t data)
         }
     }
     // safeguard
-    if (event_idx == (NO_OF_APS - 1))
+    if (event_idx == NO_OF_APS)
         return;
     else
         ap_data[event_idx++] = data;

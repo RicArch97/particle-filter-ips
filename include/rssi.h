@@ -40,7 +40,7 @@
 // The Q factor determines the responsiveness of the filter
 #define ERROR_VARIANCE_P    1
 #define MEASUREMENT_NOISE_R 20
-#define PROCESS_NOISE_Q     0.01   
+#define PROCESS_NOISE_Q     0.005 
 
 typedef struct {
     float state;

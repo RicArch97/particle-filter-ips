@@ -27,13 +27,18 @@
 #define UTIL_H
 
 #include <stdint.h>
+#include <math.h>
+
+#define clampf(v, minv, maxv)   (fmaxf(fminf(maxv, v), minv))
+#define S_TO_US(s)              (s * 1000000)
+#define US_TO_S(us)             (us / 1000000)  
 
 unsigned long ble_util_mix(unsigned long a, unsigned long b, unsigned long c);
 float ble_util_rand_float(float min, float max);
 float *ble_util_corput(int set_size, int base);
 int *ble_util_prime_sieve(int set_size);
 float ble_util_scale(float x, float a, float b, float c, float d);
-float ble_util_timedelta(int64_t *start_us);
+int64_t ble_util_timedelta(int64_t *start_us);
 float ble_util_angle_2_pi(float y, float x);
 
 #endif

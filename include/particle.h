@@ -29,8 +29,7 @@
 #include "main.h"
 #include "mqtt.h"
 
-#define PARTICLE_SET_SIZE       500
-#define NO_OF_APS               4
+#define PARTICLE_SET            500
 
 #define AP_MEASUREMENT_NOISE    0.5
 #define RATIO_COEFFICIENT       1.2
@@ -54,6 +53,6 @@ typedef struct {
     float weight;
 } ble_particle_t;
 
-int ble_particle_update(ble_mqtt_ap_t *ap, ble_mqtt_node_state_t *node, int size);
+int ble_particle_update(ble_mqtt_pf_data_t *data);
 
 #endif

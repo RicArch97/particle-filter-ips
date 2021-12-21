@@ -91,7 +91,7 @@ float ble_rssi_low_pass_filter(float kalman_rssi)
     if (prev == 0)
         prev = kalman_rssi;
     
-    float dt = ble_util_timedelta(&start_us);
+    float dt = (float)US_TO_S(ble_util_timedelta(&start_us));
     // smoothing factor (0 < alpha < 1)
     float new = prev + ((dt / (kalman_rssi + dt)) * (kalman_rssi - prev));
     prev = new;
@@ -121,7 +121,7 @@ void ble_rssi_update(int measurement)
     float rssi_m = ble_rssi_to_meters(kalman_rssi.state, TX_POWER_ONE_METER);
     // low pass filter go get rid of high frequency spikes
     float filtered_rssi_m = ble_rssi_low_pass_filter(rssi_m);
-    // store value or publish using MQTT 
+    // store value or publish using MQTT
 #ifdef HOST
     ble_mqtt_ap_t host_ap = {
         .id = ID,

@@ -35,6 +35,12 @@
 
 #define RECONNECT_MAX   3
 
+#define PF_TASK_NAME    "Update particle filter"
+#define PF_TASK_SIZE    90000
+#define PF_TASK_PRIO    10
+
+#define NO_OF_APS       4
+
 typedef struct {
     struct {
         float x;
@@ -57,6 +63,11 @@ typedef enum {
     MQTT_STATE_DISCONNECTED = 0,
     MQTT_STATE_CONNECTED = 1
 } mqtt_state_t;
+
+typedef struct {
+    ble_mqtt_ap_t aps[NO_OF_APS];
+    ble_mqtt_node_state_t *node;
+} ble_mqtt_pf_data_t;
 
 mqtt_state_t ble_mqtt_get_state(void);
 void ble_mqtt_init(void);

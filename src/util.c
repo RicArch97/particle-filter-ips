@@ -25,11 +25,14 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <math.h>
 
 #include <esp_timer.h>
+
+#include "util.h"
 
 /**
  * \brief Mix values of 3 given parameters.
@@ -170,16 +173,16 @@ float ble_util_scale(float x, float a, float b, float c, float d)
  * 
  * \param start_us Pointer to start time in microseconds.
  * 
- * \return Timedelta as floating point in seconds.
+ * \return Timedelta in microseconds.
  */
-float ble_util_timedelta(int64_t *start_us)
+int64_t ble_util_timedelta(int64_t *start_us)
 {
     if (*start_us == 0)
         *start_us = esp_timer_get_time();
 
     // calculate timedelta
     int64_t current_us = esp_timer_get_time();
-    float dt = (float)((double)(current_us - *start_us) / 1000000);
+    int64_t dt = current_us - *start_us;
     *start_us = current_us;
 
     return dt;
