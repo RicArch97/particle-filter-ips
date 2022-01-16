@@ -66,7 +66,7 @@ typedef enum {
 
 typedef struct {
     ble_mqtt_ap_t aps[NO_OF_APS];
-    ble_mqtt_node_state_t *node;
+    ble_mqtt_node_state_t node;
 } ble_mqtt_pf_data_t;
 
 mqtt_state_t ble_mqtt_get_state(void);

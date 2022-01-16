@@ -43,7 +43,6 @@ static int reconnect_tries = 0;
 
 #ifdef HOST
 static ble_mqtt_ap_t ap_data[NO_OF_APS];
-static ble_mqtt_node_state_t node_state;
 static ble_mqtt_pf_data_t pf_data;
 static SemaphoreHandle_t xSemaphore = NULL;
 static int event_idx = 0;
@@ -164,7 +163,6 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
         // check if we have a value for each AP
         if (event_idx == NO_OF_APS) {
             memcpy(pf_data.aps, ap_data, sizeof(ap_data));
-            pf_data.node = &node_state;
             // create task for particle update to prevent exceeding watchdog timer
             TaskHandle_t xHandle = NULL;
             xTaskCreate(ble_mqtt_update_pf_task, PF_TASK_NAME, PF_TASK_SIZE, 
@@ -234,11 +232,6 @@ void ble_mqtt_init(void)
         ble_mqtt_event_handler, NULL));
     ESP_ERROR_CHECK(esp_mqtt_client_start(client));
 #ifdef HOST
-    // initialize node data position (center of the given area by default)
-    // the other elements are 0 by default
-    node_state.coord.x = AREA_X / 2;
-    node_state.coord.y = AREA_Y / 2;
-
     // initialize mutex semaphore
     xSemaphore = xSemaphoreCreateMutex();
     if (xSemaphore == NULL) {

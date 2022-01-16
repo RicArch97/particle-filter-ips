@@ -31,8 +31,8 @@
 
 #define PARTICLE_SET            500
 
-#define AP_MEASUREMENT_NOISE    0.5
-#define RATIO_COEFFICIENT       1.2
+#define AP_MEASUREMENT_NOISE    0.3
+#define RATIO_COEFFICIENT       0.8
 
 #define GAUSS_NOISE_X           0.05
 #define GAUSS_NOISE_Y           0.05

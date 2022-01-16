@@ -36,12 +36,12 @@
  * \param particles Array of particles.
  * \param node Node state.
  */
-void ble_particle_plot(ble_particle_t *particles, ble_mqtt_node_state_t *node)
+void ble_particle_plot(ble_particle_t *particles, ble_mqtt_node_state_t node)
 {
     for (int i = 0; i < PARTICLE_SET; i++) {
         printf("%c,%g,%g\n", 'p', particles[i].state.coord.x, particles[i].state.coord.y);   
     }
-    printf("%c,%g,%g\n", 'n', node->coord.x, node->coord.y);
+    printf("%c,%g,%g\n", 'n', node.coord.x, node.coord.y);
 }
 
 /**
@@ -69,13 +69,11 @@ void ble_particle_normalize(ble_particle_t *arr, int size)
  * using Halton sequence. https://en.wikipedia.org/wiki/Halton_sequence
  * 
  * \param size Amount of particles to be generated.
- * \param start_x X start coordinate of the node, for initial weight distribution.
- * \param start_y Y Start coordinate of the node, for initial weight distribution.
  * 
  * \return Pointer to an array of uniformly generated particles.
  * Returns NULL on error.
  */
-ble_particle_t *ble_particle_generate(int size, float start_x, float start_y)
+ble_particle_t *ble_particle_generate(int size)
 {
     ble_particle_t *particles = calloc(size, sizeof(ble_particle_t));
     if (particles == NULL)
@@ -108,29 +106,13 @@ ble_particle_t *ble_particle_generate(int size, float start_x, float start_y)
                 (particles+(p-1))->state.coord.y = scaled_y;
                 break;
             }
+            // random angle in a full circle, in radians
+            (particles+(p-1))->state.angle = ble_util_rand_float(0, (2 * M_PI));
+            // initial weight value
+            (particles+(p-1))->weight = (float)1 / PARTICLE_SET;
         }
         free(sample);
     }
-    // generate weights using the coordinates and angle
-    for (int i = 0; i < size; i++) {
-        float p_x = particles[i].state.coord.x;
-        float p_y = particles[i].state.coord.y;
-        // random angle in a full circle, in radians
-        particles[i].state.angle = ble_util_rand_float(0, (2 * M_PI));
-        // max distance depending on pos of particle compared to start
-        float max_x, max_y;
-        max_x = (p_x < start_x) ? start_x : (AREA_X - start_x);
-        max_y = (p_y < start_y) ? start_y : (AREA_Y - start_y);
-        // calculate the weights using the distance between particle and start
-        // and the max distance from the start point to the area bound
-        float max_d, d;
-        max_d = sqrtf(powf(max_x, 2) + powf(max_y, 2));
-        d = sqrtf(powf(fabsf(start_x - p_x), 2) + powf(fabsf(start_y - p_y), 2));
-        particles[i].weight = ble_util_scale(d, 0, max_d, 1, 0);
-    }
-    // normalize weights so that sum equals 1
-    ble_particle_normalize(particles, size);
-    
     free(primes);
 
     return particles;
@@ -186,24 +168,16 @@ void ble_particle_resample(ble_particle_t *particles, int size)
  */
 float ble_particle_weight_gain(ble_particle_ap_dist_t *dist, int size)
 {
-    // longest estimated distance amongst states
-    ble_particle_ap_dist_t max_dist = dist[0];
-    for (int i = 1; i < size; i++) {
-        if (dist[i].d_node > max_dist.d_node)
-            max_dist = dist[i];
-    }
     // calculate mean distance difference between a particle and each AP
     float d_diff = 0;
     for (int i = 0; i < size; i++) {
-        float norm_d = dist[i].d_particle / sqrtf(powf(AREA_X, 2) + powf(AREA_Y, 2));
-        float norm_d_est = dist[i].d_node / max_dist.d_node;
-        // summation of normalizated distance differences
-        d_diff += (norm_d - norm_d_est);
+        // summation of distance differences to the power of 2
+        d_diff += powf(fabsf(dist[i].d_particle - dist[i].d_node), 2);
     }
     d_diff /= size;
     // calculate gain factor based on Gaussian distribution
     // g(x)_t = exp(-1/2 * (D_t / m_noise_ap)^2)
-    return expf(-0.5 * powf((d_diff / AP_MEASUREMENT_NOISE), 2));
+    return expf(-0.5 * d_diff / powf(AP_MEASUREMENT_NOISE, 2));
 }
 
 /**
@@ -227,8 +201,7 @@ int ble_particle_update(ble_mqtt_pf_data_t *data)
     // only when not yet initialized
     if (particles == NULL) {
         // weights are initalized based on the starting position of the node
-        particles = ble_particle_generate(PARTICLE_SET, data->node->coord.x, 
-            data->node->coord.y);
+        particles = ble_particle_generate(PARTICLE_SET);
         // allocation error
         if (particles == NULL)
             return -1;
@@ -260,29 +233,33 @@ int ble_particle_update(ble_mqtt_pf_data_t *data)
 
     // skip if theres are no previous states to compare
     if (prev_ap != NULL) {
-        float sum_vec_x = 0, sum_vec_y = 0;
+        float heading_vec_x = 0, heading_vec_y = 0;
         float dt = (float)US_TO_S(ble_util_timedelta(&start_us));
+        // guard division by zero or incorrect time value
+        if (dt <= 0)
+            return -1;
         // calculate direction and magnitude of the heading vector
         // by adding all the vectors pointing to each AP
         for (int i = 0; i < NO_OF_APS; i++) {
-            float angle, dy, gradient;
+            float angle, gradient;
             // calculate angle from x axis counterclockwise to each AP
-            angle = ble_util_angle_2_pi((data->aps[i].pos.y - data->node->coord.y), 
-                (data->aps[i].pos.x - data->node->coord.x));
+            angle = ble_util_angle_2_pi((data->aps[i].pos.y - data->node.coord.y), 
+                (data->aps[i].pos.x - data->node.coord.x));
             // calculate gradient between previous state and new state
             gradient = (data->aps[i].node_distance - prev_ap[i].node_distance) / dt;
             // calculate the sum of the x and y vectors
-            sum_vec_x += (gradient * cosf(angle));
-            sum_vec_y += (gradient * sinf(angle));
+            // reverse direction of the vectors, negetive gradient means heading towards AP
+            heading_vec_x += (-1 * (gradient * cosf(angle)));
+            heading_vec_y += (-1 * (gradient * sinf(angle)));
         }
         // update node speed (magnitude of heading vector) and angle estimates
-        float speed = sqrtf(powf(sum_vec_x, 2) + powf(sum_vec_y, 2));
-        float angle = ble_util_angle_2_pi(sum_vec_y, sum_vec_x);
+        float speed = sqrtf(powf(heading_vec_x, 2) + powf(heading_vec_y, 2));
+        float angle = ble_util_angle_2_pi(heading_vec_y, heading_vec_x);
         
         // update the state of each particle
         for (int i = 0; i < PARTICLE_SET; i++) {
             // the rotation change is proportional to that of the node
-            float new_angle = particles[i].state.angle + (angle - data->node->angle);
+            float new_angle = particles[i].state.angle + (angle - data->node.angle);
             // make sure to be in the unit circle
             new_angle = (new_angle < 0) ? (new_angle + (2 * M_PI)) : new_angle;
             new_angle = (new_angle > (2 * M_PI)) ? (new_angle - (2 * M_PI)): new_angle;
@@ -298,8 +275,8 @@ int ble_particle_update(ble_mqtt_pf_data_t *data)
             particles[i].state.coord.y = clampf(new_y, 0, AREA_Y);
         }
         // set new node values
-        data->node->speed = speed;
-        data->node->angle = angle;
+        data->node.speed = speed;
+        data->node.angle = angle;
     }
 
     // weight gain per particle (caculated by distance differences)
@@ -322,15 +299,16 @@ int ble_particle_update(ble_mqtt_pf_data_t *data)
     if (n_eff < (PARTICLE_SET * RATIO_COEFFICIENT))
         ble_particle_resample(particles, PARTICLE_SET);
 
-    // average the coordinates of existing particles from their coordinate vectors
-    float sum_coord_x = 0, sum_coord_y = 0;
+    // calculate a weighted average of all particles for a node state estimate
+    float sum_coord_x = 0, sum_coord_y = 0, sum_weights = 0;
     for (int i = 0; i < PARTICLE_SET; i++) {
-        sum_coord_x += particles[i].state.coord.x;
-        sum_coord_y += particles[i].state.coord.y;
+        sum_weights += particles[i].weight;
+        sum_coord_x += (particles[i].weight * particles[i].state.coord.x);
+        sum_coord_y += (particles[i].weight * particles[i].state.coord.y);
     }
     // clamp position in our area
-    data->node->coord.x = clampf((sum_coord_x / PARTICLE_SET), 0, AREA_X);
-    data->node->coord.y = clampf((sum_coord_y / PARTICLE_SET), 0, AREA_Y);
+    data->node.coord.x = clampf((sum_coord_x / sum_weights), 0, AREA_X);
+    data->node.coord.y = clampf((sum_coord_y / sum_weights), 0, AREA_Y);
 
     if (prev_ap == NULL)
         prev_ap = malloc(NO_OF_APS * sizeof(ble_mqtt_ap_t));
