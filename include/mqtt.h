@@ -28,6 +28,8 @@
 
 #include <mqtt_client.h>
 
+#include "particle.h"
+
 #define TOPIC           "ap"
 #define KEEPALIVE       60
 #define RECONNECT       1000
@@ -39,39 +41,14 @@
 #define PF_TASK_SIZE    90000
 #define PF_TASK_PRIO    10
 
-#define NO_OF_APS       4
-
-typedef struct {
-    struct {
-        float x;
-        float y;
-    } pos;
-    int id;
-    float node_distance;
-} ble_mqtt_ap_t;
-
-typedef struct {
-    struct {
-        float x;
-        float y;
-    } coord;
-    float speed;
-    float angle;
-} ble_mqtt_node_state_t;
-
 typedef enum {
-    MQTT_STATE_DISCONNECTED = 0,
-    MQTT_STATE_CONNECTED = 1
+    MQTT_STATE_DISCONNECTED,
+    MQTT_STATE_CONNECTED
 } mqtt_state_t;
-
-typedef struct {
-    ble_mqtt_ap_t aps[NO_OF_APS];
-    ble_mqtt_node_state_t node;
-} ble_mqtt_pf_data_t;
 
 mqtt_state_t ble_mqtt_get_state(void);
 void ble_mqtt_init(void);
 esp_mqtt_client_handle_t ble_mqtt_get_client(void);
-void ble_mqtt_store_ap_data(ble_mqtt_ap_t data);
+void ble_mqtt_store_ap_data(ble_particle_ap_t data);
 
 #endif

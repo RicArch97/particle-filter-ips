@@ -26,16 +26,50 @@
 #ifndef PARTICLE_H
 #define PARTICLE_H
 
-#include "main.h"
-#include "mqtt.h"
+#define PARTICLE_SET            400
+#define NO_OF_APS               4
 
-#define PARTICLE_SET            500
+#define AP_MEASUREMENT_VAR      0.3
+#define ORIENTATION_VAR         0.4
+#define POSITION_VAR            0.1
+#define POSITION_MEAN           0
 
-#define AP_MEASUREMENT_NOISE    0.3
-#define RATIO_COEFFICIENT       0.8
+#define RATIO_COEFFICIENT       0.9
 
-#define GAUSS_NOISE_X           0.05
-#define GAUSS_NOISE_Y           0.05
+typedef enum {
+    MOTION_STATE_STOP,
+    MOTION_STATE_MOVING,
+    MOTION_STATE_COUNT
+} motion_state_t;
+
+typedef struct {
+    struct {
+        struct {
+            float x;
+            float y;
+        } pos;
+        float theta;
+        motion_state_t motion;
+    } state;
+    float weight;
+} ble_particle_t;
+
+typedef struct {
+    struct {
+        float x;
+        float y;
+    } pos;
+    float acceleration;
+} ble_particle_node_t;
+
+typedef struct {
+    struct {
+        float x;
+        float y;
+    } pos;
+    int id;
+    float node_distance;
+} ble_particle_ap_t;
 
 typedef struct {
     float d_node;
@@ -43,16 +77,10 @@ typedef struct {
 } ble_particle_ap_dist_t;
 
 typedef struct {
-    struct {
-        struct {
-            float x;
-            float y;
-        } coord;
-        float angle;
-    } state;
-    float weight;
-} ble_particle_t;
+    ble_particle_ap_t aps[NO_OF_APS];
+    ble_particle_node_t node;
+} ble_particle_data_t;
 
-int ble_particle_update(ble_mqtt_pf_data_t *data);
+int ble_particle_update(ble_particle_data_t *data);
 
 #endif

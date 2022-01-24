@@ -26,8 +26,6 @@
 #ifndef RSSI_H
 #define RSSI_H
 
-#include <stdint.h>
-
 #define TX_POWER_ONE_METER  -60
 #define SIGNAL_LOSS         41
 

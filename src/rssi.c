@@ -23,12 +23,13 @@
  * SOFTWARE.
  */
 
-#include <stdio.h>
+#include <stdint.h>
 #include <math.h>
 
 #include "rssi.h"
 #include "util.h"
 #include "mqtt.h"
+#include "particle.h"
 #include "main.h"
 
 /**
@@ -45,19 +46,11 @@ void ble_rssi_kf_estimate(ble_rssi_state_t *s, float m)
     // calculate Kalman gain
     // K = P' / (P' + R)
     float k = err_v_p / (err_v_p + s->m_noise);
-    // calculate next state
+    // calculate next state & error variance
     // S = S'+ K * (m - S')
-    float next_s = s->state + (k * (m - s->state));
-    // calculate next error variance
     // P = (I - K) * P'
-    float next_err_v = (1 - k) * err_v_p;
-
-    // TODO
-    // is there a way the measurement and process noise can be calculated dynamically?
-
-    // update state estimate & error variance
-    s->state = next_s;
-    s->err_v = next_err_v;
+    s->state = s->state + (k * (m - s->state));
+    s->err_v = (1 - k) * err_v_p;
 }
 
 /**
@@ -123,7 +116,7 @@ void ble_rssi_update(int measurement)
     float filtered_rssi_m = ble_rssi_low_pass_filter(rssi_m);
     // store value or publish using MQTT
 #ifdef HOST
-    ble_mqtt_ap_t host_ap = {
+    ble_particle_ap_t host_ap = {
         .id = ID,
         .node_distance = filtered_rssi_m,
         .pos = {.x = POS_X, .y = POS_Y}

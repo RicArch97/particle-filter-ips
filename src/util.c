@@ -59,6 +59,21 @@ unsigned long ble_util_mix(unsigned long a, unsigned long b, unsigned long c)
 }
 
 /**
+ * \brief Return a sample from a given amount of states.
+ * 
+ * \param state_amount Amount of states to sample from.
+ * 
+ * \return Random state.
+ */
+int ble_util_sample(int state_amount)
+{
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    srand(ble_util_mix(clock(), (tv.tv_usec ^ tv.tv_sec), getpid()));
+    return (rand() % state_amount);
+}
+
+/**
  * \brief Return a random float value between a range.
  * 
  * \param min Minimum number of the range.
@@ -66,7 +81,7 @@ unsigned long ble_util_mix(unsigned long a, unsigned long b, unsigned long c)
  * 
  * \return Random float between a range.
  */
-float ble_util_rand_float(float min, float max)
+float ble_util_sample_range(float min, float max)
 {
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -186,20 +201,4 @@ int64_t ble_util_timedelta(int64_t *start_us)
     *start_us = current_us;
 
     return dt;
-}
-
-/**
- * \brief Calculate tangent of a vector in range 0 .. 2*PI
- * 
- * \param y Size in y direction
- * \param x Size in x direction
- * 
- * \return Angle in range 0 .. 2*PI
- */
-float ble_util_angle_2_pi(float y, float x)
-{
-    float angle = atan2f(y, x);
-    angle = (angle < 0) ? (angle + (2 * M_PI)) : angle;
-
-    return angle;
 }

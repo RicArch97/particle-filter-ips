@@ -42,8 +42,8 @@ static mqtt_state_t mqtt_state = MQTT_STATE_DISCONNECTED;
 static int reconnect_tries = 0;
 
 #ifdef HOST
-static ble_mqtt_ap_t ap_data[NO_OF_APS];
-static ble_mqtt_pf_data_t pf_data;
+static ble_particle_ap_t ap_data[NO_OF_APS];
+static ble_particle_data_t pf_data;
 static SemaphoreHandle_t xSemaphore = NULL;
 static int event_idx = 0;
 #endif
@@ -69,7 +69,7 @@ void ble_mqtt_log_if_nonzero(const char *message, int error_code)
 void ble_mqtt_update_pf_task(void *pv_params)
 {
 #ifdef HOST
-    ble_mqtt_pf_data_t *data = (ble_mqtt_pf_data_t*)pv_params;
+    ble_particle_data_t *data = (ble_particle_data_t*)pv_params;
     // try to take the semaphore to write to memory
     // the node state is updated within tasks and only 1 task can access it at a time
     // if the semaphore cannot be taken for the duration of 10 ticks, skip this update
@@ -132,7 +132,7 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
             break;
 
         char *data_buf = strndup(event->data, event->data_len);
-        ble_mqtt_ap_t data = {0};
+        ble_particle_ap_t data = {0};
         // split data string, delimiter is comma
         // format: [id,distance,posx,posy]
         for (int i = 0; i < strlen(data_buf); i++) {
@@ -259,7 +259,7 @@ esp_mqtt_client_handle_t ble_mqtt_get_client(void)
  * 
  * \param data Struct holding the pre-processed RSSI and position.
  */
-void ble_mqtt_store_ap_data(ble_mqtt_ap_t data)
+void ble_mqtt_store_ap_data(ble_particle_ap_t data)
 {
 #ifdef HOST
     for (int i = 0; i < NO_OF_APS; i++) {
