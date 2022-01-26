@@ -66,7 +66,7 @@ float ble_rssi_to_meters(float kalman_rssi, int8_t tx_power)
     // RSSI = -10 * n * log10(d / d0) + A0
     // with d0 measured at 1 meter:
     // d = 10^((A - RSSI) / (10 * n))
-    return pow10f((float)(tx_power - kalman_rssi) / (float)(10 * BLE_ENV_FACTOR_IND));
+    return pow10f(((float)tx_power - kalman_rssi) / (10.0F * BLE_ENV_FACTOR_IND));
 }
 
 /**
