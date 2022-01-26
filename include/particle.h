@@ -30,9 +30,8 @@
 #define NO_OF_APS               4
 
 #define AP_MEASUREMENT_VAR      0.3
-#define ORIENTATION_VAR         0.4
+#define ORIENTATION_VAR         0.2
 #define POSITION_VAR            0.1
-#define POSITION_MEAN           0
 
 #define RATIO_COEFFICIENT       0.9
 
@@ -40,7 +39,7 @@ typedef enum {
     MOTION_STATE_STOP,
     MOTION_STATE_MOVING,
     MOTION_STATE_COUNT
-} motion_state_t;
+} ble_particle_motion_t;
 
 typedef struct {
     struct {
@@ -49,7 +48,7 @@ typedef struct {
             float y;
         } pos;
         float theta;
-        motion_state_t motion;
+        ble_particle_motion_t motion;
     } state;
     float weight;
 } ble_particle_t;

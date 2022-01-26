@@ -130,7 +130,7 @@ ble_particle_t *ble_particle_generate(int size)
  * \brief Create a sample from Gaussian probability distribution,
  * using the Box-Muller algorithm.
  * 
- * \param mu Expected value (mean).
+ * \param mu Mean of the Gaussian.
  * \param sigma Standarddeviation.
  * 
  * \return Value in Gaussian distribution with given mu and sigma.
@@ -148,8 +148,8 @@ float ble_particle_gaussian_sample(float mu, float sigma)
     while (u1 <= FLT_EPSILON);
 
     // calculate the x value
-    float mag = sigma * sqrt(-2.0F * log(u1));
-    float z0  = mag * cos((2.0F * M_PI) * u2) + mu;
+    float mag = sigma * sqrtf(-2.0F * logf(u1));
+    float z0 = mag * cosf((2.0F * M_PI) * u2) + mu;
     
     return z0;
 }
@@ -166,7 +166,8 @@ void ble_particle_state_predict(ble_particle_t *particles, int size)
     for (int i = 0; i < size; i++) {
         float d_theta = 0, d_pos = 0;
         // sample a motion state for every particle
-        motion_state_t m_sample = (motion_state_t)ble_util_sample(MOTION_STATE_COUNT);
+        ble_particle_motion_t m_sample = 
+            (ble_particle_motion_t)ble_util_sample(MOTION_STATE_COUNT);
         // sample orientation delta en position delta based on motion state
         switch(m_sample) {
         case MOTION_STATE_STOP:
@@ -175,8 +176,8 @@ void ble_particle_state_predict(ble_particle_t *particles, int size)
             break;
         case MOTION_STATE_MOVING:
             // orientation and position sampled from Gaussian distribution
-            d_theta = ble_particle_gaussian_sample(0, sqrtf(ORIENTATION_VAR));
-            d_pos = ble_particle_gaussian_sample(POSITION_MEAN, sqrtf(POSITION_VAR));
+            d_theta = ble_particle_gaussian_sample(0.0F, sqrtf(ORIENTATION_VAR));
+            d_pos = ble_particle_gaussian_sample(0.0F, sqrtf(POSITION_VAR));
             break;
         default:
             break;
