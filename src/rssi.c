@@ -84,7 +84,7 @@ float ble_rssi_low_pass_filter(float kalman_rssi)
     if (prev == 0)
         prev = kalman_rssi;
     
-    float dt = (float)US_TO_S(ble_util_timedelta(&start_us));
+    float dt = ble_util_timedelta(&start_us);
     // smoothing factor (0 < alpha < 1)
     float new = prev + ((dt / (kalman_rssi + dt)) * (kalman_rssi - prev));
     prev = new;

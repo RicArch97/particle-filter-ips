@@ -190,14 +190,14 @@ float ble_util_scale(float x, float a, float b, float c, float d)
  * 
  * \return Timedelta in microseconds.
  */
-int64_t ble_util_timedelta(int64_t *start_us)
+float ble_util_timedelta(int64_t *start_us)
 {
     if (*start_us == 0)
         *start_us = esp_timer_get_time();
 
     // calculate timedelta
     int64_t current_us = esp_timer_get_time();
-    int64_t dt = current_us - *start_us;
+    float dt = (float)US_TO_S((double)(current_us - *start_us));
     *start_us = current_us;
 
     return dt;
