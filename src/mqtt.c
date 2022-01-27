@@ -70,7 +70,6 @@ void ble_mqtt_update_pf_task(void *pv_params)
 {
 #ifdef HOST
     ble_particle_data_t *data = (ble_particle_data_t*)pv_params;
-    printf("here\n");
     // try to take the semaphore to write to memory
     // the node state is updated within tasks and only 1 task can access it at a time
     // if the semaphore cannot be taken for the duration of 10 ticks, skip this update
