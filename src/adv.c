@@ -2,7 +2,7 @@
  * MicroStorm - BLE Tracking
  * src/adv.c
  *
- * Copyright (c) 2021 Ricardo Steijn
+ * Copyright (c) 2022 Ricardo Steijn
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,7 @@
 #include <esp_gap_ble_api.h>
 #include <mbedtls/sha1.h>
 
-#include "main.h"
+#include "config.h"
 #include "adv.h"
 #include "controller.h"
 

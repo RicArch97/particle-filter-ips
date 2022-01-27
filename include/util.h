@@ -2,7 +2,7 @@
  * MicroStorm - BLE Tracking
  * include/util.h
  *
- * Copyright (c) 2021 Ricardo Steijn
+ * Copyright (c) 2022 Ricardo Steijn
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,7 @@
 #define clampf(v, minv, maxv)   (fmaxf(fminf(maxv, v), minv))
 #define clampaf(a)              (fmodf((a), (2 * M_PI)) + ((a) < 0 ? (2 * M_PI) : 0))
 
-#define US_TO_S(us)             (us / 1000000)  
+#define US_TO_S(us)             (us / 1000000)
 
 unsigned long ble_util_mix(unsigned long a, unsigned long b, unsigned long c);
 int ble_util_sample(int states);

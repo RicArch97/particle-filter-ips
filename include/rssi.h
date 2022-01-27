@@ -2,7 +2,7 @@
  * MicroStorm - BLE Tracking
  * include/rssi.h
  *
- * Copyright (c) 2021 Ricardo Steijn
+ * Copyright (c) 2022 Ricardo Steijn
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,7 @@
 #define TX_POWER_ONE_METER  -60
 #define SIGNAL_LOSS         41
 
-#define BLE_ENV_FACTOR_IND  2   
+#define BLE_ENV_FACTOR_IND  2
 
 // Kalman filter tuning parameters
 // P is calculated every iteration and is initialized at 1
@@ -38,7 +38,7 @@
 // The Q factor determines the responsiveness of the filter
 #define ERROR_VARIANCE_P    1
 #define MEASUREMENT_NOISE_R 20
-#define PROCESS_NOISE_Q     0.005 
+#define PROCESS_NOISE_Q     0.005
 
 typedef struct {
     float state;

@@ -2,7 +2,7 @@
  * MicroStorm - BLE Tracking
  * include/adv.h
  *
- * Copyright (c) 2021 Ricardo Steijn
+ * Copyright (c) 2022 Ricardo Steijn
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal

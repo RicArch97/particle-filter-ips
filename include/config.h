@@ -1,8 +1,8 @@
 /* 
  * MicroStorm - BLE Tracking
- * include/main.h
+ * include/config.h
  *
- * Copyright (c) 2021 Ricardo Steijn
+ * Copyright (c) 2022 Ricardo Steijn
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,8 +23,8 @@
  * SOFTWARE.
  */
 
-#ifndef MAIN_H
-#define MAIN_H
+#ifndef CONFIG_H
+#define CONFIG_H
 
 // purpose of this device; can be HOST, AP or NODE
 // HOST is an AP and runs the particle filtering process

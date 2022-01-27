@@ -2,7 +2,7 @@
  * MicroStorm - BLE Tracking
  * src/particle.c
  *
- * Copyright (c) 2021 Ricardo Steijn
+ * Copyright (c) 2022 Ricardo Steijn
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,19 +32,15 @@
 
 #include "particle.h"
 #include "util.h"
-#include "main.h"
+#include "config.h"
 
 /**
- * \brief Plot the particle and node positions in SerialPlot.
+ * \brief Write the node position to STDOUT so it can be plotted.
  * 
- * \param particles Array of particles.
  * \param node Node state.
  */
-void ble_particle_plot(ble_particle_t *particles, ble_particle_node_t node)
+void ble_particle_plot(ble_particle_node_t node)
 {
-    for (int i = 0; i < PARTICLE_SET; i++) {
-        printf("%c,%g,%g\n", 'p', particles[i].state.pos.x, particles[i].state.pos.y);   
-    }
     printf("%c,%g,%g\n", 'n', node.pos.x, node.pos.y);
 }
 
@@ -343,7 +339,7 @@ int ble_particle_update(ble_particle_data_t *data)
         free(dist[i]);
     free(dist);
 
-    ble_particle_plot(particles, data->node);
+    ble_particle_plot(data->node);
 
     return 0;
 }

@@ -2,7 +2,7 @@
  * MicroStorm - BLE Tracking
  * src/mqtt.c
  *
- * Copyright (c) 2021 Ricardo Steijn
+ * Copyright (c) 2022 Ricardo Steijn
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,7 @@
 #include <freertos/FreeRTOS.h>
 
 #include "mqtt.h"
-#include "main.h"
+#include "config.h"
 #include "particle.h"
 #include "wifi.h"
 
@@ -70,6 +70,7 @@ void ble_mqtt_update_pf_task(void *pv_params)
 {
 #ifdef HOST
     ble_particle_data_t *data = (ble_particle_data_t*)pv_params;
+    printf("here\n");
     // try to take the semaphore to write to memory
     // the node state is updated within tasks and only 1 task can access it at a time
     // if the semaphore cannot be taken for the duration of 10 ticks, skip this update
@@ -170,7 +171,7 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
             // reset counter & clear buffer
             event_idx = 0;
             memset(ap_data, 0, sizeof(ap_data));
-        }        
+        }
 #endif
         break;
     case MQTT_EVENT_BEFORE_CONNECT:

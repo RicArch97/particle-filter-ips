@@ -2,7 +2,7 @@
  * MicroStorm - BLE Tracking
  * src/wifi.c
  *
- * Copyright (c) 2021 Ricardo Steijn
+ * Copyright (c) 2022 Ricardo Steijn
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,7 @@
 #include <freertos/event_groups.h>
 
 #include "wifi.h"
-#include "main.h"
+#include "config.h"
 
 static const char *TAG = "wifi";
 

@@ -2,7 +2,7 @@
  * MicroStorm - BLE Tracking
  * include/particle.h
  *
- * Copyright (c) 2021 Ricardo Steijn
+ * Copyright (c) 2022 Ricardo Steijn
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,11 +29,11 @@
 #define PARTICLE_SET            400
 #define NO_OF_APS               4
 
-#define AP_MEASUREMENT_VAR      0.3
+#define AP_MEASUREMENT_VAR      0.8
 #define ORIENTATION_VAR         0.2
 #define POSITION_VAR            0.1
 
-#define RATIO_COEFFICIENT       0.9
+#define RATIO_COEFFICIENT       0.95
 
 typedef enum {
     MOTION_STATE_STOP,
