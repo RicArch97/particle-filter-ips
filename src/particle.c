@@ -200,15 +200,26 @@ void ble_particle_state_predict(ble_particle_t *particles, int size)
  */
 float ble_particle_weight_gain(ble_particle_ap_dist_t *dist, int size)
 {
-    // calculate variance between a particle and each AP
-    float d_diff = 0;
+    // longest estimated distance amongst states
+    ble_particle_ap_dist_t max_dist = dist[0];
+    for (int i = 1; i < size; i++) {
+        if (dist[i].d_node > max_dist.d_node)
+            max_dist = dist[i];
+    }
+    // calculate average variance between a particle and each AP
+    float d_diff = 0, norm_d_est = 0, norm_d = 0;
     for (int i = 0; i < size; i++) {
-        d_diff += powf(fabsf(dist[i].d_particle - dist[i].d_node), 2);
+        // normalize distances to better represent the differences
+        // x_norm = (x - x_min) / (x_max - x_min), where x_min is always 0
+        norm_d_est = dist[i].d_node / max_dist.d_node;
+        norm_d = dist[i].d_particle / sqrtf(powf(AREA_X, 2) + powf(AREA_Y, 2));
+        // summation of absolute normalizated distance differences
+        d_diff += fabsf(norm_d - norm_d_est);
     }
     d_diff /= size;
     // calculate gain factor based on Gaussian distribution
-    // g(x)_t = exp(-1/2 * D_t / (m_noise_ap)^2)
-    return expf(-0.5F * d_diff / powf(AP_MEASUREMENT_VAR, 2));
+    // g(x)_t = exp(-1/2 * (D_t / m_noise_ap)^2)
+    return expf(-0.5F * powf((d_diff / AP_MEASUREMENT_VAR), 2));
 }
 
 /**
