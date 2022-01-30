@@ -32,7 +32,8 @@
 #include "rssi.h"
 #include "mqtt.h"
 
-void app_main(void)
+void 
+app_main(void)
 {
     // initalize ble controller
     ble_controller_init();

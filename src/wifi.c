@@ -45,8 +45,9 @@ static int conn_retries = 0;
  * \param event_id The id for the received event.
  * \param event_data The data for the event.
  */
-void ble_wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, 
-        void *event_data)
+static void 
+ble_wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, 
+    void *event_data)
 {
     ip_event_got_ip_t *event;
 
@@ -79,7 +80,8 @@ void ble_wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t even
 /**
  * \brief Initialize wifi connection and event loop.
  */
-void ble_wifi_init(void)
+void 
+ble_wifi_init(void)
 {
     wifi_event_group = xEventGroupCreate();
 

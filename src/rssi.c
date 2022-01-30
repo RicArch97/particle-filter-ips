@@ -38,7 +38,8 @@
  * \param s RSSI state data.
  * \param m Raw RSSI value in meters.
  */
-void ble_rssi_kf_estimate(ble_rssi_state_t *s, float m)
+static void 
+ble_rssi_kf_estimate(ble_rssi_state_t *s, float m)
 {
     // error variance prediction
     // P' = P(t-1) + Q
@@ -61,7 +62,8 @@ void ble_rssi_kf_estimate(ble_rssi_state_t *s, float m)
  * 
  * \return Measured distance in meters.
  */
-float ble_rssi_to_meters(float kalman_rssi, int8_t tx_power)
+static float 
+ble_rssi_to_meters(float kalman_rssi, int8_t tx_power)
 {
     // RSSI = -10 * n * log10(d / d0) + A0
     // with d0 measured at 1 meter:
@@ -76,7 +78,8 @@ float ble_rssi_to_meters(float kalman_rssi, int8_t tx_power)
  * 
  * \return Low-pass filtered RSSI value.
  */
-float ble_rssi_low_pass_filter(float kalman_rssi)
+static float 
+ble_rssi_low_pass_filter(float kalman_rssi)
 {
     static float prev = 0;
     static int64_t start_us = 0;
@@ -97,7 +100,8 @@ float ble_rssi_low_pass_filter(float kalman_rssi)
  * 
  * \param measurement Measured RSSI value.
  */
-void ble_rssi_update(int measurement)
+void 
+ble_rssi_update(int measurement)
 {
     static ble_rssi_state_t kalman_rssi = {0};
 

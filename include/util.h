@@ -35,7 +35,7 @@
 #define US_TO_S(us)             (us / 1000000)
 
 unsigned long ble_util_mix(unsigned long a, unsigned long b, unsigned long c);
-int ble_util_sample(int states);
+int ble_util_sample(int state_amount);
 float ble_util_sample_range(float min, float max);
 float *ble_util_corput(int set_size, int base);
 int *ble_util_prime_sieve(int set_size);

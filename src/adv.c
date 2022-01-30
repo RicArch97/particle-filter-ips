@@ -54,7 +54,8 @@ static esp_ble_adv_params_t ble_adv_params = {
  * 
  * \return Value of a uid service data struct.
  */
-eddystone_uid_t ble_adv_create_service_data(int8_t tx_power, int id)
+eddystone_uid_t 
+ble_adv_create_service_data(int8_t tx_power, int id)
 {
     eddystone_uid_t uid = {0};
 
@@ -88,7 +89,8 @@ eddystone_uid_t ble_adv_create_service_data(int8_t tx_power, int id)
  * 
  * \param service_data eddystone_uid_t struct instance initiated with service data.
  */
-void ble_adv_set_advertisement_data(eddystone_uid_t service_data)
+void 
+ble_adv_set_advertisement_data(eddystone_uid_t service_data)
 {   
     eddystone_adv_packet_t ble_adv_packet = {
         .flags = {
@@ -133,7 +135,8 @@ void ble_adv_set_advertisement_data(eddystone_uid_t service_data)
  * 
  * \param id The id of the device.
  */
-void ble_adv_set_scan_response_data(int id)
+void 
+ble_adv_set_scan_response_data(int id)
 {
     char id_buf[2];
     sprintf(id_buf, "%d", id);
@@ -182,7 +185,8 @@ void ble_adv_set_scan_response_data(int id)
 /**
  * \brief Set advertising params & start advertising as Eddystone UID beacon.
  */
-void ble_adv_start(void)
+void 
+ble_adv_start(void)
 {
     if (!ble_controller_enabled()) {
         ESP_LOGE(TAG, "Could not start advertising, BLE controller not enabled.");
@@ -198,7 +202,8 @@ void ble_adv_start(void)
 /**
  * \brief Stop advertising.
  */
-void ble_adv_stop(void)
+void 
+ble_adv_stop(void)
 {
     esp_err_t stop_err = esp_ble_gap_stop_advertising();
     if (stop_err != ESP_OK) {

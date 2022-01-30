@@ -44,7 +44,8 @@
  * 
  * \return Mixed value.
  */
-unsigned long ble_util_mix(unsigned long a, unsigned long b, unsigned long c)
+unsigned long 
+ble_util_mix(unsigned long a, unsigned long b, unsigned long c)
 {
     a -= b; a -= c; a ^= (c>>13);
     b -= c; b -= a; b ^= (a<<8);
@@ -65,7 +66,8 @@ unsigned long ble_util_mix(unsigned long a, unsigned long b, unsigned long c)
  * 
  * \return Random state.
  */
-int ble_util_sample(int state_amount)
+int 
+ble_util_sample(int state_amount)
 {
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -81,7 +83,8 @@ int ble_util_sample(int state_amount)
  * 
  * \return Random float between a range.
  */
-float ble_util_sample_range(float min, float max)
+float 
+ble_util_sample_range(float min, float max)
 {
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -98,7 +101,8 @@ float ble_util_sample_range(float min, float max)
  * \return Pointer to a dynmically allocated array with the values.
  * Returns NULL on error.
  */
-float *ble_util_corput(int set_size, int base)
+float *
+ble_util_corput(int set_size, int base)
 {
     float *sequence = malloc(set_size * sizeof(float));
     if (sequence == NULL)
@@ -126,7 +130,8 @@ float *ble_util_corput(int set_size, int base)
  * \return Pointer to a dynamically allocated array with the values.
  * Returns NULL on error.
  */
-int *ble_util_prime_sieve(int set_size) 
+int *
+ble_util_prime_sieve(int set_size) 
 {
     int n = 10, count = 0, start = 2;
     int *primes = malloc(set_size * sizeof(int));
@@ -178,7 +183,8 @@ int *ble_util_prime_sieve(int set_size)
  * 
  * \return Value mapped in the given range.
  */
-float ble_util_scale(float x, float a, float b, float c, float d)
+float 
+ble_util_scale(float x, float a, float b, float c, float d)
 {
     return c + ((x - a) * (d - c) / (b - a));
 }
@@ -190,7 +196,8 @@ float ble_util_scale(float x, float a, float b, float c, float d)
  * 
  * \return Timedelta in microseconds.
  */
-float ble_util_timedelta(int64_t *start_us)
+float 
+ble_util_timedelta(int64_t *start_us)
 {
     if (*start_us == 0)
         *start_us = esp_timer_get_time();

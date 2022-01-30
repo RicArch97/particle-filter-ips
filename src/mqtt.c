@@ -54,7 +54,8 @@ static int event_idx = 0;
  * \param message Error message to be logged.
  * \param error_code Error code to be logged.
  */
-void ble_mqtt_log_if_nonzero(const char *message, int error_code)
+static void 
+ble_mqtt_log_if_nonzero(const char *message, int error_code)
 {
     if (error_code != 0) {
         ESP_LOGE(TAG, "Last error %s: 0x%x", message, error_code);
@@ -66,7 +67,8 @@ void ble_mqtt_log_if_nonzero(const char *message, int error_code)
  * 
  * \param pv_params Parameter provided to XTaskCreate.
  */ 
-void ble_mqtt_update_pf_task(void *pv_params)
+static void 
+ble_mqtt_update_pf_task(void *pv_params)
 {
 #ifdef HOST
     ble_particle_data_t *data = (ble_particle_data_t*)pv_params;
@@ -96,7 +98,8 @@ void ble_mqtt_update_pf_task(void *pv_params)
  * \param event_id The id for the received event.
  * \param event_data The data for the event.
  */
-void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, 
+static void 
+ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, 
         void *event_data)
 {
     esp_mqtt_event_handle_t event = event_data;
@@ -201,7 +204,8 @@ void ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t e
  * 
  * \return MQTT_STATE_DISCONNECTED or MQTT_STATE_CONNECTED.
  */
-mqtt_state_t ble_mqtt_get_state(void)
+mqtt_state_t 
+ble_mqtt_get_state(void)
 {
     return mqtt_state;
 }
@@ -209,7 +213,8 @@ mqtt_state_t ble_mqtt_get_state(void)
 /**
  * \brief Initialize MQTT broker connection and event loop.
  */
-void ble_mqtt_init(void)
+void 
+ble_mqtt_init(void)
 {   
     // connect to wifi
     ble_wifi_init();
@@ -247,7 +252,8 @@ void ble_mqtt_init(void)
  * 
  * \return Current active MQTT client instance.
  */
-esp_mqtt_client_handle_t ble_mqtt_get_client(void)
+esp_mqtt_client_handle_t 
+ble_mqtt_get_client(void)
 {
     return client;
 }
@@ -259,7 +265,8 @@ esp_mqtt_client_handle_t ble_mqtt_get_client(void)
  * 
  * \param data Struct holding the pre-processed RSSI and position.
  */
-void ble_mqtt_store_ap_data(ble_particle_ap_t data)
+void 
+ble_mqtt_store_ap_data(ble_particle_ap_t data)
 {
 #ifdef HOST
     for (int i = 0; i < NO_OF_APS; i++) {

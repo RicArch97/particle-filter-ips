@@ -39,7 +39,8 @@
  * 
  * \param node Node state.
  */
-void ble_particle_plot(ble_particle_node_t node)
+static void 
+ble_particle_plot(ble_particle_node_t node)
 {
     printf("%c,%g,%g\n", 'n', node.pos.x, node.pos.y);
 }
@@ -50,7 +51,8 @@ void ble_particle_plot(ble_particle_node_t node)
  * \param arr Array of particles.
  * \param size Size of the array.
  */
-void ble_particle_normalize(ble_particle_t *arr, int size)
+static void 
+ble_particle_normalize(ble_particle_t *arr, int size)
 {
     float sum = 0;
     for (int i = 0; i < size; i++) {
@@ -73,7 +75,8 @@ void ble_particle_normalize(ble_particle_t *arr, int size)
  * \return Pointer to an array of uniformly generated particles.
  * Returns NULL on error.
  */
-ble_particle_t *ble_particle_generate(int size)
+static ble_particle_t *
+ble_particle_generate(int size)
 {
     ble_particle_t *particles = calloc(size, sizeof(ble_particle_t));
     if (particles == NULL)
@@ -112,7 +115,7 @@ ble_particle_t *ble_particle_generate(int size)
             (particles+(p-1))->state.theta = ble_util_sample_range(0.0F, (2.0F * M_PI));
             // inital motion state
             (particles+(p-1))->state.motion = MOTION_STATE_STOP;
-            // initial weight value
+            // initial (normalized) weight value
             (particles+(p-1))->weight = 1.0F / PARTICLE_SET;
         }
         free(sample);
@@ -131,7 +134,8 @@ ble_particle_t *ble_particle_generate(int size)
  * 
  * \return Value in Gaussian distribution with given mu and sigma.
  */
-float ble_particle_gaussian_sample(float mu, float sigma)
+static float 
+ble_particle_gaussian_sample(float mu, float sigma)
 {
     // sample 2 numbers in the range [0..1]
     // make sure u1 is greater than machine epsilon
@@ -157,7 +161,8 @@ float ble_particle_gaussian_sample(float mu, float sigma)
  * \param particles Array of particles.
  * \param size Size of the particle set.
  */
-void ble_particle_state_predict(ble_particle_t *particles, int size)
+static void 
+ble_particle_state_predict(ble_particle_t *particles, int size)
 {
     for (int i = 0; i < size; i++) {
         float d_theta = 0, d_pos = 0;
@@ -198,7 +203,8 @@ void ble_particle_state_predict(ble_particle_t *particles, int size)
  * 
  * \return Weight gain factor for a particle.
  */
-float ble_particle_weight_gain(ble_particle_ap_dist_t *dist, int size)
+static float 
+ble_particle_weight_gain(ble_particle_ap_dist_t *dist, int size)
 {
     // longest estimated distance amongst states
     ble_particle_ap_dist_t max_dist = dist[0];
@@ -231,7 +237,8 @@ float ble_particle_weight_gain(ble_particle_ap_dist_t *dist, int size)
  * \param particles Array of particles.
  * \param size Size of particle set.
  */
-void ble_particle_resample(ble_particle_t *particles, int size)
+static void 
+ble_particle_resample(ble_particle_t *particles, int size)
 {
     ble_particle_t *new_particles = calloc(size, sizeof(ble_particle_t));
     if (new_particles == NULL)
@@ -271,7 +278,8 @@ void ble_particle_resample(ble_particle_t *particles, int size)
  * 
  * \return 0 on succes, -1 on failure.
  */
-int ble_particle_update(ble_particle_data_t *data)
+int 
+ble_particle_update(ble_particle_data_t *data)
 {
     static ble_particle_t *particles = NULL;
     static ble_particle_ap_t *prev_ap = NULL;

@@ -43,7 +43,8 @@ static const char *TAG = "controller";
  * \param event The event type.
  * \param param GAP parameters that can be checked.
  */
-void ble_controller_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
+static void 
+ble_controller_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
     esp_err_t err;
     int found_adv;
@@ -108,7 +109,8 @@ void ble_controller_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t 
 /**
  * \brief Initialize the BLE environment.
  */
-void ble_controller_init(void)
+void 
+ble_controller_init(void)
 {
     ESP_ERROR_CHECK(nvs_flash_init());
 
@@ -141,7 +143,8 @@ void ble_controller_init(void)
  * 
  * \return true when the controller is enabled, false when it is not.
  */
-int ble_controller_enabled(void)
+int 
+ble_controller_enabled(void)
 {
     return (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_ENABLED) ? 1 : 0;
 }

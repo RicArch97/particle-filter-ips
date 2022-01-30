@@ -54,7 +54,8 @@ static esp_ble_scan_params_t ble_scan_params = {
  * \return Pointer to the dynamically allocated byte array.
  * Returns NULL on error.
  */
-uint8_t *get_namespace_hash(const char *namespace)
+static uint8_t *
+get_namespace_hash(const char *namespace)
 {
     uint8_t *hash = malloc(SHA1_LENGTH);
     if (hash == NULL)
@@ -76,7 +77,8 @@ uint8_t *get_namespace_hash(const char *namespace)
  * 
  * \return 16 bit value with swapped endianess.
  */
-uint16_t little_endian_read_u16(const uint8_t *data, uint8_t p_ctr)
+static uint16_t 
+little_endian_read_u16(const uint8_t *data, uint8_t p_ctr)
 {
     return ((uint16_t)data[p_ctr]) | (((uint16_t)data[(p_ctr)+1]) << 8);
 }
@@ -90,8 +92,9 @@ uint16_t little_endian_read_u16(const uint8_t *data, uint8_t p_ctr)
  * 
  * \return 0 on success, -1 on failure.
  */
-int ble_scan_decode_adv(const uint8_t *p_adv_data, uint8_t data_len, 
-        ble_scan_rst_pkt_t *rst)
+int 
+ble_scan_decode_adv(const uint8_t *p_adv_data, uint8_t data_len, 
+    ble_scan_rst_pkt_t *rst)
 {
     if (data_len == 0 || p_adv_data == NULL || rst == NULL)
         return -1;
@@ -172,8 +175,9 @@ int ble_scan_decode_adv(const uint8_t *p_adv_data, uint8_t data_len,
  * 
  * \return 0 on success, -1 on failure.
  */
-int ble_scan_decode_scan_rsp(const uint8_t *p_scan_rsp_data, uint8_t data_len, 
-        ble_scan_rst_pkt_t *rst)
+int 
+ble_scan_decode_scan_rsp(const uint8_t *p_scan_rsp_data, uint8_t data_len, 
+    ble_scan_rst_pkt_t *rst)
 {
     if (data_len == 0 || p_scan_rsp_data == NULL || rst == NULL)
         return -1;
@@ -217,7 +221,8 @@ int ble_scan_decode_scan_rsp(const uint8_t *p_scan_rsp_data, uint8_t data_len,
  * 
  * \param duration Duration is the scan in seconds. 0 means endless.
  */
-void ble_scan_start(uint32_t duration)
+void 
+ble_scan_start(uint32_t duration)
 {
     if (!ble_controller_enabled()) {
         ESP_LOGE(TAG, "Could not start scanning, BLE controller not enabled.");
@@ -237,7 +242,8 @@ void ble_scan_start(uint32_t duration)
 /**
  * \brief Stop advertising.
  */
-void ble_scan_stop(void)
+void 
+ble_scan_stop(void)
 {
     esp_err_t stop_err = esp_ble_gap_stop_scanning();
     if (stop_err != ESP_OK) {
