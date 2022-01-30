@@ -35,17 +35,6 @@
 #include "config.h"
 
 /**
- * \brief Write the node position to STDOUT so it can be plotted.
- * 
- * \param node Node state.
- */
-static void 
-ble_particle_plot(ble_particle_node_t node)
-{
-    printf("%c,%g,%g\n", 'n', node.pos.x, node.pos.y);
-}
-
-/**
  * \brief Normalize probability weights of particles.
  * 
  * \param arr Array of particles.
@@ -357,8 +346,6 @@ ble_particle_update(ble_particle_data_t *data)
     for (int i = 0; i < PARTICLE_SET; i++)
         free(dist[i]);
     free(dist);
-
-    ble_particle_plot(data->node);
 
     return 0;
 }
