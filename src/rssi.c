@@ -132,7 +132,7 @@ ble_rssi_update(int measurement)
     int ret = asprintf(&payload, "%d,%g,%g,%g", ID, filtered_rssi_m, POS_X, POS_Y);
     if (ret != ESP_FAIL) {
         if (ble_mqtt_get_state() == MQTT_STATE_CONNECTED)
-            esp_mqtt_client_publish(ble_mqtt_get_client(), TOPIC, payload, 0, 0, 0);
+            esp_mqtt_client_publish(ble_mqtt_get_client(), AP_TOPIC, payload, 0, 0, 0);
         free(payload);
     }
 #endif

@@ -28,9 +28,11 @@
 
 #include <mqtt_client.h>
 
+#include "config.h"
 #include "particle.h"
 
-#define TOPIC           "ap"
+#define AP_TOPIC        "ap"
+#define NODE_TOPIC      "node"
 #define KEEPALIVE       60
 #define RECONNECT       1000
 #define NETWORK_TIMEOUT 20000
@@ -44,11 +46,21 @@
 typedef enum {
     MQTT_STATE_DISCONNECTED,
     MQTT_STATE_CONNECTED
-} mqtt_state_t;
+} ble_mqtt_state_t;
 
-mqtt_state_t ble_mqtt_get_state(void);
-void ble_mqtt_init(void);
-esp_mqtt_client_handle_t ble_mqtt_get_client(void);
+typedef enum {
+    TASK_PRINT_NODE_STATE,
+    TASK_PUBLISH_NODE_STATE,
+    TASK_NONE
+} ble_mqtt_task_t;
+
+#ifdef HOST
+void ble_mqtt_set_task(ble_mqtt_task_t task);
 void ble_mqtt_store_ap_data(ble_particle_ap_t data);
+#endif
+
+void ble_mqtt_init(void);
+ble_mqtt_state_t ble_mqtt_get_state(void);
+esp_mqtt_client_handle_t ble_mqtt_get_client(void);
 
 #endif

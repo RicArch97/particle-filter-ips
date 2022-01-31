@@ -48,6 +48,10 @@ app_main(void)
 #elif defined(AP) || defined(HOST)
     // connect to wifi & MQTT broker
     ble_mqtt_init();
+ #ifdef HOST
+    // print the node state after every pf update
+    ble_mqtt_set_task(TASK_PRINT_NODE_STATE);
+ #endif
     // start scanning indefinitely at 16 ms interval, with 16 ms duration
     ble_scan_start(0);
 #endif

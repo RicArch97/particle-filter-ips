@@ -38,13 +38,14 @@
 static const char *TAG = "mqtt";
 
 static esp_mqtt_client_handle_t client;
-static mqtt_state_t mqtt_state = MQTT_STATE_DISCONNECTED;
+static ble_mqtt_state_t mqtt_state = MQTT_STATE_DISCONNECTED;
 static int reconnect_tries = 0;
 
 #ifdef HOST
 static ble_particle_ap_t ap_data[NO_OF_APS];
 static ble_particle_data_t pf_data;
 static SemaphoreHandle_t xSemaphore = NULL;
+static ble_mqtt_task_t extra_task = TASK_NONE;
 static int event_idx = 0;
 #endif
 
@@ -62,6 +63,31 @@ ble_mqtt_log_if_nonzero(const char *message, int error_code)
     }
 }
 
+#ifdef HOST
+/**
+ * \brief Write the node position to STDOUT.
+ */
+static void 
+ble_mqtt_node_print(void)
+{
+    printf("%g,%g\n", pf_data.node.pos.x, pf_data.node.pos.y);
+}
+
+/**
+ * \brief Publish the node state to a MQTT topic "node".
+ */
+static void 
+ble_mqtt_node_publish(void)
+{
+    char *payload;
+    int ret = asprintf(&payload, "%g,%g", pf_data.node.pos.x, pf_data.node.pos.y);
+    if (ret != ESP_FAIL) {
+        if (ble_mqtt_get_state() == MQTT_STATE_CONNECTED)
+            esp_mqtt_client_publish(ble_mqtt_get_client(), NODE_TOPIC, payload, 0, 0, 0);
+        free(payload);
+    }
+}
+
 /**
  * \brief Task that updates the particle filter with new data upon receiving new events.
  * 
@@ -70,25 +96,69 @@ ble_mqtt_log_if_nonzero(const char *message, int error_code)
 static void 
 ble_mqtt_update_pf_task(void *pv_params)
 {
-#ifdef HOST
-    ble_particle_data_t *data = (ble_particle_data_t*)pv_params;
-    // try to take the semaphore to write to memory
-    // the node state is updated within tasks and only 1 task can access it at a time
-    // if the semaphore cannot be taken for the duration of 10 ticks, skip this update
-    if (xSemaphoreTake(xSemaphore, (TickType_t)10) == pdTRUE) {
+    // try to take the semaphore to write a new node state
+    // poll the semaphore (don't block) because values are received fast
+    if (xSemaphoreTake(xSemaphore, (TickType_t)0) == pdTRUE) {
         // update particle filter
-        if (ble_particle_update(data) != ESP_OK)
-            ESP_LOGE(TAG, "Particle filter update failed");
+        int ret = ble_particle_update(&pf_data);
         // return access to the resource
         xSemaphoreGive(xSemaphore);
+        // execute extra task only after particle filter was updated
+        if (ret == ESP_OK) {
+            switch (extra_task) {
+            case TASK_PRINT_NODE_STATE:
+                ble_mqtt_node_print();
+                break;
+            case TASK_PUBLISH_NODE_STATE:
+                ble_mqtt_node_publish();
+                break;
+            default:
+                break;
+            }
+        }
+        else
+            ESP_LOGE(TAG, "Particle filter update failed");
     }
-    else
-        ESP_LOGW(TAG, "Unable to take semaphore for particle filter update");
-
     // delete task after it is done, as it should only run once
     vTaskDelete(NULL);
-#endif
 }
+
+/**
+ * \brief Set a task to be executed when the particle filter is updated.
+ * 
+ * \param task TASK_PRINT_NODE_STATE, TASK_PUBLISH_NODE_STATE or TASK_NONE.
+ */
+void 
+ble_mqtt_set_task(ble_mqtt_task_t task)
+{
+    extra_task = task;
+}
+
+/**
+ * \brief Cache new AP data.
+ * The HOST AP caches the data directly instead of publishing via MQTT.
+ * This function is only relevant for the HOST device.
+ * 
+ * \param data Struct holding the pre-processed RSSI and position.
+ */
+void 
+ble_mqtt_store_ap_data(ble_particle_ap_t data)
+{
+    for (int i = 0; i < NO_OF_APS; i++) {
+        // we already cached an event from the HOST AP
+        // replace it with the newer data for better accuracy
+        if (ap_data[i].id == data.id) {
+            ap_data[i] = data;
+            return;
+        }
+    }
+    // safeguard
+    if (event_idx == NO_OF_APS)
+        return;
+    else
+        ap_data[event_idx++] = data;
+}
+#endif
 
 /**
  * \brief Handler for MQTT events in the MQTT event loop.
@@ -100,7 +170,7 @@ ble_mqtt_update_pf_task(void *pv_params)
  */
 static void 
 ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, 
-        void *event_data)
+    void *event_data)
 {
     esp_mqtt_event_handle_t event = event_data;
 
@@ -111,7 +181,7 @@ ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_
 #ifdef HOST
         // in case of receiving values realtime, QoS 0 provides the least overhead
         // if a value is lost, it doesn't matter as we get a new more up to date value later
-        esp_mqtt_client_subscribe(client, TOPIC, 0);
+        esp_mqtt_client_subscribe(client, AP_TOPIC, 0);
 #endif
         break;
     case MQTT_EVENT_DISCONNECTED:
@@ -131,7 +201,7 @@ ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_
     case MQTT_EVENT_DATA:
 #ifdef HOST
         // check that topic matches
-        if (strncmp(event->topic, TOPIC, event->topic_len) != ESP_OK)
+        if (strncmp(event->topic, AP_TOPIC, event->topic_len) != ESP_OK)
             break;
 
         char *data_buf = strndup(event->data, event->data_len);
@@ -167,9 +237,9 @@ ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_
         if (event_idx == NO_OF_APS) {
             memcpy(pf_data.aps, ap_data, sizeof(ap_data));
             // create task for particle update to prevent exceeding watchdog timer
-            TaskHandle_t xHandle = NULL;
+            TaskHandle_t xHandle;
             xTaskCreate(ble_mqtt_update_pf_task, PF_TASK_NAME, PF_TASK_SIZE, 
-                &pf_data, PF_TASK_PRIO, &xHandle);
+                NULL, PF_TASK_PRIO, &xHandle);
             // reset counter & clear buffer
             event_idx = 0;
             memset(ap_data, 0, sizeof(ap_data));
@@ -197,17 +267,6 @@ ble_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_
         ESP_LOGW(TAG, "Unhandled MQTT event; %d", event->event_id);
         break;
     }
-}
-
-/**
- * \brief Get the MQTT client state.
- * 
- * \return MQTT_STATE_DISCONNECTED or MQTT_STATE_CONNECTED.
- */
-mqtt_state_t 
-ble_mqtt_get_state(void)
-{
-    return mqtt_state;
 }
 
 /**
@@ -248,6 +307,17 @@ ble_mqtt_init(void)
 }
 
 /**
+ * \brief Get the MQTT client state.
+ * 
+ * \return MQTT_STATE_DISCONNECTED or MQTT_STATE_CONNECTED.
+ */
+ble_mqtt_state_t 
+ble_mqtt_get_state(void)
+{
+    return mqtt_state;
+}
+
+/**
  * \brief Return the active MQTT client instance.
  * 
  * \return Current active MQTT client instance.
@@ -256,31 +326,4 @@ esp_mqtt_client_handle_t
 ble_mqtt_get_client(void)
 {
     return client;
-}
-
-/**
- * \brief Cache new AP data.
- * The HOST AP caches the data directly instead of publishing via MQTT.
- * This function is only relevant for the HOST device.
- * 
- * \param data Struct holding the pre-processed RSSI and position.
- */
-void 
-ble_mqtt_store_ap_data(ble_particle_ap_t data)
-{
-#ifdef HOST
-    for (int i = 0; i < NO_OF_APS; i++) {
-        // we already cached an event from the HOST AP
-        // replace it with the newer data for better accuracy
-        if (ap_data[i].id == data.id) {
-            ap_data[i] = data;
-            return;
-        }
-    }
-    // safeguard
-    if (event_idx == NO_OF_APS)
-        return;
-    else
-        ap_data[event_idx++] = data;
-#endif
 }

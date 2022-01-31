@@ -2,8 +2,6 @@
 
 Particle Filter Indoor Positioning System on ESP32 microcontrollers.
 
-# Work in progress, don't use this yet
-
 ## Building and running
 
 The easiest way to build and run is using the PlatformIO extension in VS Code. 
