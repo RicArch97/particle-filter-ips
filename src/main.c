@@ -23,8 +23,6 @@
  * SOFTWARE.
  */
 
-#include <stdint.h>
-
 #include "config.h"
 #include "adv.h"
 #include "controller.h"

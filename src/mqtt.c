@@ -24,8 +24,9 @@
  */
 
 #include <stdlib.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <string.h>
-#include <ctype.h>
 
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
