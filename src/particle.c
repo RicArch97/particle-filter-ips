@@ -165,7 +165,7 @@ ble_particle_state_predict(ble_particle_t *particles, int size)
         case MOTION_STATE_MOVING:
             // orientation and position sampled from Gaussian distribution
             d_theta = ble_particle_gaussian_sample(0.0F, sqrtf(ORIENTATION_VAR));
-            d_pos = ble_particle_gaussian_sample(0.0F, sqrtf(POSITION_VAR));
+            d_pos = fabsf(ble_particle_gaussian_sample(POSITION_MEAN, sqrtf(POSITION_VAR)));
             break;
         default:
             break;

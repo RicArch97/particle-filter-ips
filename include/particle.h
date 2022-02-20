@@ -30,8 +30,9 @@
 #define NO_OF_APS               4
 
 #define AP_MEASUREMENT_VAR      0.8
-#define ORIENTATION_VAR         0.2
-#define POSITION_VAR            0.1
+#define ORIENTATION_VAR         0.1
+#define POSITION_MEAN           0.2
+#define POSITION_VAR            0.02
 
 #define RATIO_COEFFICIENT       0.95
 
