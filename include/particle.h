@@ -59,7 +59,6 @@ typedef struct {
         float x;
         float y;
     } pos;
-    float acceleration;
 } ble_particle_node_t;
 
 typedef struct {
