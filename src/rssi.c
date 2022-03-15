@@ -63,7 +63,7 @@ ble_rssi_kf_estimate(ble_rssi_state_t *s, float m)
  * \return Measured distance in meters.
  */
 static float 
-ble_rssi_to_meters(float kalman_rssi, int8_t tx_power)
+ble_rssi_to_meters(float kalman_rssi, int tx_power)
 {
     // RSSI = -10 * n * log10(d / d0) + A0
     // with d0 measured at 1 meter:
