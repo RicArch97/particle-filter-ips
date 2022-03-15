@@ -168,6 +168,8 @@ ble_util_prime_sieve(int set_size)
             memset(prime, 1, ((n + 1) * sizeof(uint8_t)));
         }
     }
+    free(prime);
+    
     return primes;
 }
 
